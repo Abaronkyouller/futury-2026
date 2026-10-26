@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+/** Page title with breadcrumb, optional subtitle and an action area on the right. */
 export function Header({
   title,
   subtitle,
@@ -12,7 +13,7 @@ export function Header({
   return (
     <div className="heading">
       <div>
-        <div className="breadcrumb">Review run · Entgeltersatzleistungen</div>
+        <div className="breadcrumb">Systemprüfung · Entgeltersatzleistungen (DTA EEL)</div>
         <h1>{title}</h1>
         {subtitle && <p>{subtitle}</p>}
       </div>

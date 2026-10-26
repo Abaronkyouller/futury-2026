@@ -3,6 +3,7 @@ import type {
   ExpectedField,
   Priority,
   ReasoningStep,
+  TestStep,
 } from "../types/review";
 import { BASES, PRIORITIES } from "../types/review";
 
@@ -13,7 +14,10 @@ export type RawCase = {
   given: string;
   when: string;
   then: string;
+  testData: ExpectedField[];
+  steps: TestStep[];
   expectedFields: ExpectedField[];
+  criteriaIds: string[];
   /** null when the model returned an unknown priority; the validator flags it. */
   priority: Priority | null;
   priorityReason: string;
@@ -34,22 +38,36 @@ export function extractJson(text: string): unknown {
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start === -1 || end <= start) {
-    throw new Error("The model reply contains no JSON object.");
+    throw new Error("Die Modellantwort enthält kein JSON-Objekt.");
   }
   try {
     return JSON.parse(cleaned.slice(start, end + 1));
   } catch (e) {
-    throw new Error(`The model reply is not valid JSON: ${(e as Error).message}`);
+    throw new Error(`Die Modellantwort ist kein gültiges JSON: ${(e as Error).message}`);
   }
 }
 
-const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
+export const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
 
-const strList = (v: unknown): string[] =>
+export const strList = (v: unknown): string[] =>
   Array.isArray(v) ? v.map(str).filter(Boolean) : [];
 
-const isObj = (v: unknown): v is Record<string, unknown> =>
+export const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** Normalizes a list of { field, value } objects; entries without a field name are dropped. */
+function fieldList(v: unknown): ExpectedField[] {
+  return (Array.isArray(v) ? v : [])
+    .filter(isObj)
+    .map((f) => ({ field: str(f.field), value: str(f.value) }))
+    .filter((f) => f.field);
+}
+
+/** Abgabegrund values are two-digit codes; anything else is dropped rather than guessed. */
+function toAbgabegrund(v: unknown): string | undefined {
+  const s = typeof v === "number" ? String(v).padStart(2, "0") : str(v);
+  return /^\d{2}$/.test(s) ? s : undefined;
+}
 
 function toPriority(v: unknown): Priority | null {
   const s = str(v);
@@ -64,7 +82,6 @@ function toBasis(v: unknown): Basis {
 
 function toCase(v: unknown): RawCase | null {
   if (!isObj(v)) return null;
-  const expected = Array.isArray(v.expectedFields) ? v.expectedFields : [];
   const reasoning = Array.isArray(v.reasoning) ? v.reasoning : [];
   return {
     title: str(v.title) || "(ohne Titel)",
@@ -72,10 +89,13 @@ function toCase(v: unknown): RawCase | null {
     given: str(v.given),
     when: str(v.when),
     then: str(v.then),
-    expectedFields: expected
+    testData: fieldList(v.testData),
+    steps: (Array.isArray(v.steps) ? v.steps : [])
       .filter(isObj)
-      .map((f) => ({ field: str(f.field), value: str(f.value) }))
-      .filter((f) => f.field),
+      .map((st) => ({ actor: str(st.actor), action: str(st.action), abgabegrund: toAbgabegrund(st.abgabegrund) }))
+      .filter((st) => st.action),
+    expectedFields: fieldList(v.expectedFields),
+    criteriaIds: strList(v.criteriaIds),
     priority: toPriority(v.priority),
     priorityReason: str(v.priorityReason),
     reasoning: reasoning.filter(isObj).map((r) => ({
@@ -92,8 +112,8 @@ function toCase(v: unknown): RawCase | null {
 export function parseCases(text: string): RawCase[] {
   const json = extractJson(text);
   const list = isObj(json) && Array.isArray(json.testCases) ? json.testCases : null;
-  if (!list) throw new Error('The JSON has no "testCases" array.');
+  if (!list) throw new Error('Das JSON enthält kein Feld "testCases" (Liste).');
   const cases = list.map(toCase).filter((c): c is RawCase => c !== null);
-  if (cases.length === 0) throw new Error("The model returned no usable test cases.");
+  if (cases.length === 0) throw new Error("Das Modell hat keine verwertbaren Testfälle geliefert.");
   return cases;
 }

@@ -19,7 +19,7 @@ export const AI_MAX_TOKENS = 4000;
 export const FEEDBACK_EXAMPLES_MAX = 6;
 
 /** UI limit for cases per run. */
-export const MAX_CASES_LIMIT = 8;
+export const MAX_CASES_LIMIT = 12;
 
 /** Placeholder the model must use when an expected value cannot be derived from the source. */
 export const OPEN_VALUE_MARKER = "[offen – Regel nicht bestätigt]";
@@ -36,3 +36,6 @@ export const DEFAULT_SETTINGS: GenerationSettings = {
   priorityFocus: "Ausgewogen",
   useFeedback: true,
 };
+
+/** Requirement extraction should copy, not create: always run with temperature 0. */
+export const EXTRACTION_TEMPERATURE = 0;

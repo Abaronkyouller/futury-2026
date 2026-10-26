@@ -1,0 +1,69 @@
+/*
+ * Colour tokens – ITSG colour scheme (AGENTS.md: "Use an ITSG color scheme").
+ *
+ * All colours of the app are defined here and nowhere else; style.css and
+ * features.css only reference these variables.
+ *
+ * ASSUMPTION: itsg.de could not be loaded while this file was written, so the
+ * brand values below are an approximation of the ITSG look (dark corporate
+ * blue, white surfaces, a red accent from the logo). Replace the four
+ * "Markenfarben" with the exact hex values from the ITSG style guide; every
+ * other token is derived for contrast and can stay as it is.
+ */
+:root {
+  /* Markenfarben (brand) – verify against https://www.itsg.de/ */
+  --itsg-blue: #004b87;
+  --itsg-blue-dark: #002b52;
+  --itsg-red: #d50032;
+  --itsg-sky: #5b9bd5;
+
+  /* Brand roles */
+  --primary: var(--itsg-blue);
+  --primary-hover: #003b6b;
+  --primary-ink: #0d3d66;
+  --primary-soft: #e3edf6;
+  --primary-tint: #eef4fa;
+  --primary-line: #b3cbe0;
+  --accent: var(--itsg-red);
+  --on-primary: #ffffff;
+
+  /* Navigation */
+  --nav-bg: var(--itsg-blue-dark);
+  --nav-active: #0f4373;
+  --nav-border: #1d4d78;
+  --nav-text: #cddbe8;
+  --nav-muted: #8eaac4;
+
+  /* Neutrals */
+  --bg: #f2f4f7;
+  --surface: #ffffff;
+  --surface-2: #f5f7f9;
+  --text: #1c2631;
+  --muted: #5f6c78;
+  --border: #dde3e9;
+  --border-soft: #e9edf1;
+  --code-bg: #0d2a45;
+  --code-text: #dbe8f3;
+
+  /* Status */
+  --good: #1f7a46;
+  --good-bg: #e3f4e9;
+  --warn: #8a6113;
+  --warn-bg: #fff3d9;
+  --warn-line: #f2dfb0;
+  --bad: #b0102f;
+  --bad-bg: #fde6ea;
+  --neutral: #485a6c;
+  --neutral-bg: #e8edf2;
+
+  /* Evidence kinds (traceability: source-backed vs. generated vs. assumption) */
+  --source: #1f7a46;
+  --source-bg: #e3f4e9;
+  --assumption: #8a6113;
+  --assumption-bg: #fff3d9;
+  --generated: #4b3fa0;
+  --generated-bg: #eceafa;
+  --rule: #0d6f86;
+  --rule-bg: #e0f2f6;
+  --missing: #98a4ae;
+}

@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { DEFAULT_SETTINGS, STORAGE_KEY } from "../config/ai";
-import type { ChangeLogEntry, GenerationSettings } from "../types/review";
+import { initial as sampleRequirements } from "../data/requirements";
+import type { Req } from "../types/requirement";
+import type { ChangeLogEntry, GeneratedTestCase, GenerationSettings } from "../types/review";
 import { ReviewContext } from "./reviewContext";
-import type { ReviewState, ReviewStore } from "./reviewContext";
+import type { LogInput, ReviewState, ReviewStore } from "./reviewContext";
 
-const EMPTY: ReviewState = { cases: [], changelog: [], settings: DEFAULT_SETTINGS };
+const EMPTY: ReviewState = {
+  requirements: sampleRequirements,
+  cases: [],
+  changelog: [],
+  settings: DEFAULT_SETTINGS,
+};
+
+/** Fills fields added in later versions so older persisted cases stay readable. */
+function normalizeCase(c: GeneratedTestCase): GeneratedTestCase {
+  return { ...c, testData: c.testData ?? [], steps: c.steps ?? [], criteriaIds: c.criteriaIds ?? [] };
+}
 
 /** Reads persisted state; storage can be missing or blocked, so failures fall back to empty. */
 function load(): ReviewState {
@@ -14,7 +26,8 @@ function load(): ReviewState {
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<ReviewState>;
     return {
-      cases: parsed.cases ?? [],
+      requirements: parsed.requirements ?? sampleRequirements,
+      cases: (parsed.cases ?? []).map(normalizeCase),
       changelog: parsed.changelog ?? [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
     };
@@ -33,26 +46,78 @@ function save(state: ReviewState) {
 
 let entryCounter = 0;
 /** Creates a timestamped change-log entry. */
-function entry(fields: Omit<ChangeLogEntry, "id" | "timestamp">): ChangeLogEntry {
+function entry(fields: LogInput): ChangeLogEntry {
   entryCounter += 1;
   return { id: `CL-${Date.now()}-${entryCounter}`, timestamp: new Date().toISOString(), ...fields };
 }
 
-/** Lists the settings keys whose values differ, as "key: old → new". */
+/** German labels of the settings keys, used in change-log entries. */
+const SETTING_LABEL: Record<keyof GenerationSettings, string> = {
+  model: "Modell",
+  temperature: "Kreativität",
+  maxCases: "Max. Testfälle",
+  techniques: "Techniken",
+  reasoningDetail: "Begründungstiefe",
+  priorityFocus: "Prioritätsfokus",
+  useFeedback: "Rückmeldungen nutzen",
+};
+
+/** Lists the settings whose values differ, as "Label: alt → neu". */
 function diffSettings(a: GenerationSettings, b: GenerationSettings): string[] {
   return (Object.keys(b) as (keyof GenerationSettings)[])
     .filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]))
-    .map((k) => `${k}: ${JSON.stringify(a[k])} → ${JSON.stringify(b[k])}`);
+    .map((k) => `${SETTING_LABEL[k]}: ${JSON.stringify(a[k])} → ${JSON.stringify(b[k])}`);
 }
 
+const describeReq = (r: Req) => `${r.status}${r.comment ? ` · "${r.comment}"` : ""}`;
+
 /**
- * Holds generated cases, examiner feedback and the change log for the whole app.
- * There is no backend: everything lives in this browser's localStorage.
+ * Holds requirements, generated cases, examiner feedback and the change log
+ * for the whole app. There is no backend: everything lives in this browser's
+ * localStorage. Uploaded documents are kept separately (DocumentProvider).
  */
 export function ReviewProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ReviewState>(load);
 
   useEffect(() => save(state), [state]);
+
+  const logEvent = useCallback<ReviewStore["logEvent"]>((kind, fields) => {
+    setState((s) => ({ ...s, changelog: [...s.changelog, entry({ kind, ...fields })] }));
+  }, []);
+
+  const addRequirements = useCallback<ReviewStore["addRequirements"]>((documentName, runId, method, reqs) => {
+    setState((s) => ({
+      ...s,
+      requirements: [...s.requirements, ...reqs],
+      changelog: [
+        ...s.changelog,
+        entry({
+          kind: "Extraktion",
+          summary: `${reqs.length} Anforderung(en) aus „${documentName}“ extrahiert (${method === "model" ? reqs[0]?.origin?.model ?? "KI" : "regelbasiert"}, Lauf ${runId})`,
+          after: reqs.map((r) => `${r.id} · ${r.origin?.sectionLabel ?? r.source}`).join("\n"),
+        }),
+      ],
+    }));
+  }, []);
+
+  const reviewRequirement = useCallback<ReviewStore["reviewRequirement"]>((id, status, comment) => {
+    setState((s) => {
+      const target = s.requirements.find((r) => r.id === id);
+      if (!target) return s;
+      const next: Req = { ...target, status, comment: comment || undefined };
+      const before = describeReq(target);
+      const after = describeReq(next);
+      if (before === after) return s;
+      return {
+        ...s,
+        requirements: s.requirements.map((r) => (r.id === id ? next : r)),
+        changelog: [
+          ...s.changelog,
+          entry({ kind: "Anforderung", requirementId: id, summary: `${id} auf „${status}“ gesetzt`, before, after }),
+        ],
+      };
+    });
+  }, []);
 
   const addRun = useCallback<ReviewStore["addRun"]>((requirementId, runId, cases) => {
     setState((s) => ({
@@ -63,8 +128,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
         entry({
           kind: "Generierung",
           requirementId,
-          summary: `${cases.length} test case(s) generated in run ${runId} (${cases[0]?.origin.model ?? "?"})`,
-          after: cases.map((c) => c.id).join(", "),
+          summary: `${cases.length} Testfall/Testfälle in Lauf ${runId} erzeugt (${cases[0]?.origin.model ?? "?"})`,
+          after: cases.map((c) => `${c.id} · ${c.title}`).join("\n"),
         }),
       ],
     }));
@@ -80,9 +145,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
       return {
         ...s,
         cases: s.cases.map((c) =>
-          c.id === caseId
-            ? { ...c, review: { decision, comment, reviewedAt: new Date().toISOString() } }
-            : c,
+          c.id === caseId ? { ...c, review: { decision, comment, reviewedAt: new Date().toISOString() } } : c,
         ),
         changelog: [
           ...s.changelog,
@@ -90,7 +153,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
             kind: "Prüfung",
             requirementId: target.requirementId,
             testCaseId: caseId,
-            summary: `${caseId} marked "${decision}"`,
+            summary: `${caseId} als „${decision}“ markiert`,
             before,
             after,
           }),
@@ -108,7 +171,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
         settings: next,
         changelog: [
           ...s.changelog,
-          entry({ kind: "Einstellungen", summary: "Generation settings changed", after: changes.join("; ") }),
+          entry({ kind: "Einstellungen", summary: "Generierungseinstellungen geändert", after: changes.join("\n") }),
         ],
       };
     });
@@ -122,7 +185,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
         ...s.changelog,
         entry({
           kind: "Zurücksetzen",
-          summary: `${s.cases.length} generated case(s) and their feedback removed`,
+          summary: `${s.cases.length} generierte(r) Testfall/Testfälle samt Rückmeldungen entfernt`,
           before: s.cases.map((c) => c.id).join(", "),
         }),
       ],
@@ -130,8 +193,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const store = useMemo<ReviewStore>(
-    () => ({ ...state, addRun, reviewCase, updateSettings, resetCases }),
-    [state, addRun, reviewCase, updateSettings, resetCases],
+    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, updateSettings, resetCases, logEvent }),
+    [state, addRequirements, reviewRequirement, addRun, reviewCase, updateSettings, resetCases, logEvent],
   );
 
   return <ReviewContext.Provider value={store}>{children}</ReviewContext.Provider>;

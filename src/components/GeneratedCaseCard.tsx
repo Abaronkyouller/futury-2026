@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, X } from "lucide-react";
-import type { Basis, GeneratedTestCase, Priority } from "../types/review";
+import type { Basis, GeneratedTestCase, OriginKind, Priority } from "../types/review";
+import { ORIGIN_LABEL } from "../types/review";
 import { OPEN_VALUE_MARKER } from "../config/ai";
 import { useReviewStore } from "../state/reviewContext";
 import { Status } from "./Status";
@@ -11,33 +12,51 @@ const PRIORITY_CLASS: Record<Priority, string> = { Hoch: "bad", Mittel: "warn", 
 
 /** CSS modifier and explanation per reasoning basis. */
 const BASIS_INFO: Record<Basis, { cls: string; hint: string }> = {
-  Quelle: { cls: "basis-source", hint: "Restates the given requirement/source" },
-  Annahme: { cls: "basis-assumption", hint: "Model assumption – examiner must confirm" },
-  Generiert: { cls: "basis-generated", hint: "Derived test idea" },
+  Quelle: { cls: "basis-source", hint: "Steht so in der Quelle bzw. Anforderung" },
+  Annahme: { cls: "basis-assumption", hint: "Annahme – muss vom Prüfer bestätigt werden" },
+  Generiert: { cls: "basis-generated", hint: "Abgeleitete Testidee" },
+};
+
+/** CSS modifier per origin (border colour of the card and origin tag). */
+const ORIGIN_CLASS: Record<OriginKind, string> = {
+  model: "origin-ai",
+  regelbasiert: "origin-rule",
+  "offline-demo": "origin-demo",
 };
 
 export function PriorityBadge({ value }: { value: Priority }) {
   return <span className={"status " + PRIORITY_CLASS[value]}>Priorität {value}</span>;
 }
 
+/** Key/value table; rows whose value is the open marker are highlighted. */
+function FieldTable({ rows }: { rows: { field: string; value: string }[] }) {
+  return (
+    <table className="detail">
+      <tbody>
+        {rows.map((f, i) => (
+          <tr key={i} className={f.value.includes(OPEN_VALUE_MARKER) ? "openvalue" : ""}>
+            <th>{f.field}</th>
+            <td>{f.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 /**
- * One AI-proposed test case: origin, priority, GIVEN/WHEN/THEN, expected values,
- * adjustable reasoning view, rule-based checks and examiner feedback controls.
+ * One proposed test case: origin, priority, GEGEBEN/WENN/DANN, test data,
+ * message flow, expected values, adjustable reasoning view, rule-based checks
+ * and examiner feedback controls.
  */
-export function GeneratedCaseCard({
-  item,
-  showReasoning,
-}: {
-  item: GeneratedTestCase;
-  showReasoning: boolean;
-}) {
+export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTestCase; showReasoning: boolean }) {
   const { reviewCase } = useReviewStore();
   const [comment, setComment] = useState(item.review.comment);
   const failed = item.checks.filter((c) => !c.passed);
-  const isDemo = item.origin.kind === "offline-demo";
+  const kind = item.origin.kind;
 
   return (
-    <div className={"gencase " + (item.review.decision === "Abgelehnt" ? "rejected" : "")}>
+    <div className={`gencase ${ORIGIN_CLASS[kind]} ${item.review.decision === "Abgelehnt" ? "rejected" : ""}`}>
       <div className="paneltop">
         <div>
           <code>{item.id}</code>
@@ -49,39 +68,56 @@ export function GeneratedCaseCard({
         </div>
       </div>
       <div className="tags">
-        <span className={isDemo ? "origin-demo" : "origin-ai"}>
-          {isDemo ? "Offline demo · simulated, no model call" : `KI-Vorschlag · ${item.origin.model}`}
+        <span className={ORIGIN_CLASS[kind]}>
+          {ORIGIN_LABEL[kind]}
+          {kind === "model" ? ` · ${item.origin.model}` : ""}
         </span>
-        <span>{item.technique || "technique missing"}</span>
+        <span>{item.technique || "Technik fehlt"}</span>
         <span>{item.execution}</span>
         <span>{formatDateTime(item.origin.generatedAt)}</span>
+        {item.criteriaIds.map((id) => (
+          <span key={id} title="Abgedeckte Kriterium-ID">Kriterium {id}</span>
+        ))}
       </div>
-      {item.priorityReason && <p className="muted small">Priority reason: {item.priorityReason}</p>}
+      {item.priorityReason && <p className="muted small">Begründung der Priorität: {item.priorityReason}</p>}
 
       <div className="given">
-        <b>GIVEN</b>
+        <b>GEGEBEN</b>
         <p>{item.given || "—"}</p>
-        <b>WHEN</b>
+        <b>WENN</b>
         <p>{item.when || "—"}</p>
-        <b>THEN</b>
+        <b>DANN</b>
         <p>{item.then || "—"}</p>
       </div>
 
-      <h5 className="minihead">EXPECTED RESULT · PROPOSAL, NOT VERIFIED BY A RULE ENGINE</h5>
-      <table className="detail">
-        <tbody>
-          {item.expectedFields.map((f, i) => (
-            <tr key={i} className={f.value.includes(OPEN_VALUE_MARKER) ? "openvalue" : ""}>
-              <th>{f.field}</th>
-              <td>{f.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {item.testData.length > 0 && (
+        <>
+          <h5 className="minihead">TESTDATEN</h5>
+          <FieldTable rows={item.testData} />
+        </>
+      )}
+
+      {item.steps.length > 0 && (
+        <>
+          <h5 className="minihead">ABLAUF / NACHRICHTENFOLGE</h5>
+          <ol className="flow">
+            {item.steps.map((s, i) => (
+              <li key={i}>
+                <span className={"actor " + (s.actor === "Krankenkasse" ? "actor-kk" : "actor-ag")}>{s.actor || "?"}</span>
+                {s.action}
+                {s.abgabegrund && <span className="code">Abgabegrund {s.abgabegrund}</span>}
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+
+      <h5 className="minihead">ERWARTETES ERGEBNIS · VORSCHLAG, NICHT DURCH EINE REGEL-ENGINE BESTÄTIGT</h5>
+      <FieldTable rows={item.expectedFields} />
 
       {showReasoning && (
         <>
-          <h5 className="minihead">REASONING</h5>
+          <h5 className="minihead">BEGRÜNDUNG</h5>
           <ol className="reasoning">
             {item.reasoning.map((s, i) => (
               <li key={i}>
@@ -98,7 +134,7 @@ export function GeneratedCaseCard({
 
       {item.openQuestions.length > 0 && (
         <div className="notice">
-          <b>Open questions for the examiner</b>
+          <b>Offene Fragen an den Prüfer</b>
           <ul>
             {item.openQuestions.map((q) => (
               <li key={q}>{q}</li>
@@ -109,8 +145,8 @@ export function GeneratedCaseCard({
 
       <details className="checks">
         <summary>
-          Rule-based structure checks: {item.checks.length - failed.length}/{item.checks.length} passed
-          {failed.length > 0 && <span className="checkfail"> · {failed.length} issue(s)</span>}
+          Regelbasierte Strukturprüfung: {item.checks.length - failed.length}/{item.checks.length} bestanden
+          {failed.length > 0 && <span className="checkfail"> · {failed.length} Auffälligkeit(en)</span>}
         </summary>
         <ul>
           {item.checks.map((c) => (
@@ -120,26 +156,22 @@ export function GeneratedCaseCard({
             </li>
           ))}
         </ul>
-        <p className="muted small">
-          These checks verify structure and traceability only, not payroll correctness.
-        </p>
+        <p className="muted small">Diese Prüfungen betreffen nur Struktur und Nachverfolgbarkeit, nicht die fachliche Korrektheit der Entgeltabrechnung.</p>
       </details>
 
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
-        placeholder="Feedback for the AI: what is wrong, missing or good? (used in later runs)"
+        placeholder="Rückmeldung an die KI: Was ist falsch, fehlt oder ist gut? (fließt in spätere Läufe ein)"
       />
       <div className="actions">
         <button className="primary" onClick={() => reviewCase(item.id, "Akzeptiert", comment.trim())}>
-          <Check size={15} /> Accept
+          <Check size={15} /> Akzeptieren
         </button>
         <button onClick={() => reviewCase(item.id, "Abgelehnt", comment.trim())}>
-          <X size={15} /> Reject
+          <X size={15} /> Ablehnen
         </button>
-        {item.review.reviewedAt && (
-          <small className="muted">Reviewed {formatDateTime(item.review.reviewedAt)}</small>
-        )}
+        {item.review.reviewedAt && <small className="muted">Geprüft am {formatDateTime(item.review.reviewedAt)}</small>}
       </div>
     </div>
   );

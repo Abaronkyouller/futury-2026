@@ -1,12 +1,12 @@
 import { Fragment, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
-import { initial as requirements } from "../data/requirements";
 import { useReviewStore } from "../state/reviewContext";
 import { buildTraceGraph, EVIDENCE_LABEL } from "../utils/traceGraph";
 import type { Evidence, TraceNode } from "../utils/traceGraph";
 
-const EVIDENCES: Evidence[] = ["sample", "ai", "demo", "missing"];
+const EVIDENCES: Evidence[] = ["source", "sample", "ai", "rule", "demo", "missing"];
 
 /** One clickable node; border style encodes the evidence type. */
 function NodeBox({ node, active, onSelect }: { node: TraceNode; active: boolean; onSelect: (n: TraceNode) => void }) {
@@ -20,33 +20,45 @@ function NodeBox({ node, active, onSelect }: { node: TraceNode; active: boolean;
 
 /**
  * Interactive traceability graph (H4): source -> requirement -> rule ->
- * test case -> expected -> observed -> finding. Rejected AI proposals are hidden.
+ * test case -> expected -> observed -> finding. Rejected proposals are hidden.
  */
 export function GraphPage() {
-  const { cases } = useReviewStore();
-  const [reqId, setReqId] = useState("REQ-EEL-028");
+  const { cases, requirements } = useReviewStore();
+  const [params, setParams] = useSearchParams();
+  const withCases = requirements.filter((r) => cases.some((c) => c.requirementId === r.id));
+  const reqId = params.get("req") ?? withCases[withCases.length - 1]?.id ?? "REQ-EEL-028";
   const req = requirements.find((r) => r.id === reqId) ?? requirements[0];
   const graph = buildTraceGraph(req, cases);
   const [selected, setSelected] = useState<TraceNode | null>(null);
-  const active = selected ?? graph.spine[1];
+  const active = (selected && [...graph.spine, ...graph.lanes.flat()].find((n) => n.id === selected.id)) ?? graph.spine[0];
 
   return (
     <>
       <Header
-        title="Traceability graph"
-        subtitle="Follow each test case back to its requirement and source. Border styles separate sample data, AI proposals and missing evidence. Links do not prove that a payroll result is correct."
+        title="Nachverfolgbarkeit"
+        subtitle="Jeden Testfall bis zur Anforderung und zum Quelltext zurückverfolgen. Rahmenstile trennen Quelltext, Beispieldaten, KI-Vorschläge, regelbasierte Ableitungen und fehlende Nachweise. Verknüpfungen beweisen nicht, dass ein Abrechnungsergebnis korrekt ist."
       />
       <div className="rulebar">
-        Requirement{" "}
-        <select value={reqId} onChange={(e) => { setReqId(e.target.value); setSelected(null); }}>
-          {requirements.map((r) => (
-            <option key={r.id} value={r.id}>{r.id} · {r.title}</option>
+        Anforderung{" "}
+        <select
+          value={req.id}
+          onChange={(e) => {
+            setParams({ req: e.target.value });
+            setSelected(null);
+          }}
+        >
+          {[...requirements].reverse().map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.id} · {r.title} ({cases.filter((c) => c.requirementId === r.id).length})
+            </option>
           ))}
         </select>
       </div>
       <div className="legend">
         {EVIDENCES.map((e) => (
-          <span key={e} className="legenditem"><i className={`swatch ev-${e}`} /> {EVIDENCE_LABEL[e]}</span>
+          <span key={e} className="legenditem">
+            <i className={`swatch ev-${e}`} /> {EVIDENCE_LABEL[e]}
+          </span>
         ))}
       </div>
       <div className="graphgrid">
@@ -60,9 +72,7 @@ export function GraphPage() {
             ))}
           </div>
           {graph.lanes.length === 0 ? (
-            <p className="muted">
-              No test cases linked yet. Generate proposals in the AI generator.
-            </p>
+            <p className="muted">Noch keine Testfälle verknüpft. Erzeugen Sie Vorschläge im Testfall-Generator.</p>
           ) : (
             <div className="lanes">
               <div className="lanehead">
@@ -93,7 +103,10 @@ export function GraphPage() {
           <table className="detail">
             <tbody>
               {active.details.map(([k, v], i) => (
-                <tr key={i}><th>{k}</th><td>{v}</td></tr>
+                <tr key={i}>
+                  <th>{k}</th>
+                  <td className="prewrap">{v}</td>
+                </tr>
               ))}
             </tbody>
           </table>

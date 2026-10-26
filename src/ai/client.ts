@@ -10,6 +10,7 @@ export async function chatCompletion(
   model: string,
   messages: ChatMessage[],
   temperature: number,
+  maxTokens: number = AI_MAX_TOKENS,
 ): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
@@ -18,14 +19,14 @@ export async function chatCompletion(
     res = await fetch(`${AI_PROXY_PATH}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, messages, temperature, max_tokens: AI_MAX_TOKENS }),
+      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
       signal: controller.signal,
     });
   } catch (e) {
     throw new Error(
       controller.signal.aborted
-        ? `No answer within ${AI_REQUEST_TIMEOUT_MS / 1000} s.`
-        : `Gateway not reachable (${(e as Error).message}). Is the app running via "npm run dev" or "npm run preview"?`,
+        ? `Keine Antwort innerhalb von ${AI_REQUEST_TIMEOUT_MS / 1000} s.`
+        : `Gateway nicht erreichbar (${(e as Error).message}). Läuft die App über „npm run dev“ oder „npm run preview“?`,
     );
   } finally {
     clearTimeout(timer);
@@ -35,20 +36,20 @@ export async function chatCompletion(
     const body = await res.text().catch(() => "");
     const hint =
       res.status === 401 || res.status === 403
-        ? " Check HAI_API_KEY in .env.local and restart the dev server."
+        ? " Prüfen Sie HAI_API_KEY in .env.local und starten Sie den Dev-Server neu."
         : res.status === 404
-          ? " The proxy route or model name may be wrong."
+          ? " Proxy-Route oder Modellname sind vermutlich falsch."
           : res.status >= 500
-            ? " The dev-server proxy could not reach the gateway (network, VPN or firewall?) or the gateway failed. See the terminal running npm run dev."
+            ? " Der Proxy des Dev-Servers hat das Gateway nicht erreicht (Netzwerk, VPN, Firewall?) oder das Gateway ist ausgefallen. Siehe Terminal von „npm run dev“."
             : "";
-    throw new Error(`Gateway answered ${res.status}.${hint} ${body.slice(0, 300)}`.trim());
+    throw new Error(`Gateway antwortete mit Status ${res.status}.${hint} ${body.slice(0, 300)}`.trim());
   }
 
   const data: unknown = await res.json();
   const content = (data as { choices?: { message?: { content?: unknown } }[] })
     ?.choices?.[0]?.message?.content;
   if (typeof content !== "string" || !content.trim()) {
-    throw new Error("The gateway reply contains no message text.");
+    throw new Error("Die Gateway-Antwort enthält keinen Nachrichtentext.");
   }
   return content;
 }

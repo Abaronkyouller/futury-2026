@@ -1,15 +1,13 @@
 /** Status values mapped to badge colours. Unlisted values render neutral. */
 const STATUS_CLASS: Record<string, "good" | "bad" | "warn"> = {
-  Approved: "good",
-  Passed: "good",
-  Done: "good",
+  Bestanden: "good",
+  Erledigt: "good",
   Akzeptiert: "good",
   Genehmigt: "good",
-  Failed: "bad",
+  Fehlgeschlagen: "bad",
   Abgelehnt: "bad",
-  Pending: "warn",
-  "Needs review": "warn",
   Offen: "warn",
+  "Prüfung nötig": "warn",
   "In Bearbeitung": "warn",
   "In Überprüfung": "warn",
 };

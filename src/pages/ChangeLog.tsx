@@ -3,14 +3,16 @@ import { Download, Trash2 } from "lucide-react";
 import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
 import { useReviewStore } from "../state/reviewContext";
+import { CHANGE_KINDS } from "../types/review";
 import type { ChangeKind } from "../types/review";
 import { download } from "../utils/download";
 import { formatDateTime, toCsv } from "../utils/format";
 
-const KINDS: ChangeKind[] = ["Generierung", "Prüfung", "Einstellungen", "Zurücksetzen"];
-
 /** CSS modifier per change kind, so the timeline is scannable at a glance. */
 const KIND_CLASS: Record<ChangeKind, string> = {
+  Dokument: "kind-doc",
+  Extraktion: "kind-extract",
+  Anforderung: "kind-req",
   Generierung: "kind-gen",
   Prüfung: "kind-review",
   Einstellungen: "kind-settings",
@@ -19,19 +21,17 @@ const KIND_CLASS: Record<ChangeKind, string> = {
 
 /**
  * Timestamped change log (brainstorm: "timestamp for change log"). Every
- * generation, review decision and settings change is recorded with its
- * previous value, newest first. Stored in this browser only.
+ * upload, extraction, examiner decision, generation run and settings change
+ * is recorded with its previous value, newest first. Stored in this browser only.
  */
 export function ChangeLog() {
   const { changelog, cases, resetCases } = useReviewStore();
   const [kind, setKind] = useState<ChangeKind | "Alle">("Alle");
-  const entries = [...changelog]
-    .reverse()
-    .filter((e) => kind === "Alle" || e.kind === kind);
+  const entries = [...changelog].reverse().filter((e) => kind === "Alle" || e.kind === kind);
 
   const exportCsv = () =>
     download(
-      "change-log.csv",
+      "aenderungsprotokoll.csv",
       toCsv([
         ["Zeitpunkt", "Art", "Anforderung", "Testfall", "Zusammenfassung", "Vorher", "Nachher"],
         ...changelog.map((e) => [e.timestamp, e.kind, e.requirementId, e.testCaseId, e.summary, e.before, e.after]),
@@ -41,35 +41,33 @@ export function ChangeLog() {
   return (
     <>
       <Header
-        title="Change log"
-        subtitle="Every generation run, examiner decision and settings change with timestamp and previous value. Nothing is overwritten silently."
+        title="Änderungsprotokoll"
+        subtitle="Jeder Upload, jede Extraktion, Prüferentscheidung, Generierung und Einstellungsänderung mit Zeitstempel und vorherigem Wert. Nichts wird stillschweigend überschrieben."
         action={
           <div className="actions">
             <button onClick={exportCsv} disabled={changelog.length === 0}>
-              <Download size={15} /> Export CSV
+              <Download size={15} /> CSV exportieren
             </button>
             <button
               disabled={cases.length === 0}
               onClick={() => {
-                if (window.confirm(`Remove all ${cases.length} generated cases and their feedback? The log keeps a record.`)) resetCases();
+                if (window.confirm(`Alle ${cases.length} erzeugten Testfälle samt Rückmeldungen entfernen? Das Protokoll behält einen Eintrag.`)) resetCases();
               }}
             >
-              <Trash2 size={15} /> Reset generated cases
+              <Trash2 size={15} /> Erzeugte Testfälle zurücksetzen
             </button>
           </div>
         }
       />
       <div className="filters">
-        {(["Alle", ...KINDS] as const).map((k) => (
+        {(["Alle", ...CHANGE_KINDS] as const).map((k) => (
           <button key={k} className={kind === k ? "selected" : ""} onClick={() => setKind(k)}>
             {k} · {k === "Alle" ? changelog.length : changelog.filter((e) => e.kind === k).length}
           </button>
         ))}
       </div>
       <Panel>
-        {entries.length === 0 && (
-          <p className="muted">No entries yet. Generate or review test cases in the AI generator.</p>
-        )}
+        {entries.length === 0 && <p className="muted">Noch keine Einträge. Laden Sie ein Dokument hoch oder erzeugen Sie Testfälle.</p>}
         <ol className="timeline">
           {entries.map((e) => (
             <li key={e.id}>
@@ -84,8 +82,8 @@ export function ChangeLog() {
                 {(e.before || e.after) && (
                   <table className="detail compact">
                     <tbody>
-                      {e.before && <tr><th>Before</th><td>{e.before}</td></tr>}
-                      {e.after && <tr><th>After</th><td>{e.after}</td></tr>}
+                      {e.before && <tr><th>Vorher</th><td className="prewrap">{e.before}</td></tr>}
+                      {e.after && <tr><th>Nachher</th><td className="prewrap">{e.after}</td></tr>}
                     </tbody>
                   </table>
                 )}

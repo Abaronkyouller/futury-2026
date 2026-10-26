@@ -38,6 +38,19 @@ export type ReasoningStep = {
 
 export type ExpectedField = { field: string; value: string };
 
+/**
+ * One step of the test procedure, typically a message exchanged between the
+ * payroll software (Arbeitgeber) and the health insurer (Krankenkasse), e.g.
+ * "Arbeitgeber sendet DBVO mit Abgabegrund 41".
+ */
+export type TestStep = {
+  /** Who acts: "Arbeitgeber", "Krankenkasse", "Prüfer", … */
+  actor: string;
+  action: string;
+  /** Abgabegrund of the message, if the step sends one (e.g. "41"). */
+  abgabegrund?: string;
+};
+
 /** Result of one deterministic structural check run over a model output. */
 export type CheckResult = {
   id: string;
@@ -48,8 +61,20 @@ export type CheckResult = {
 
 export type ReviewDecision = "Offen" | "Akzeptiert" | "Abgelehnt";
 
-/** Where a generated case came from. "offline-demo" is a canned response, never a model call. */
-export type OriginKind = "model" | "offline-demo";
+/**
+ * Where a generated case came from.
+ * - model: language-model proposal via the gateway
+ * - regelbasiert: derived deterministically from the verbatim source quote (no model call)
+ * - offline-demo: canned response for the illustrative sample requirements, never a model call
+ */
+export type OriginKind = "model" | "regelbasiert" | "offline-demo";
+
+/** UI labels per origin kind. */
+export const ORIGIN_LABEL: Record<OriginKind, string> = {
+  model: "KI-Vorschlag",
+  regelbasiert: "Regelbasiert abgeleitet",
+  "offline-demo": "Offline-Demo (simuliert)",
+};
 
 export type GenerationOrigin = {
   kind: OriginKind;
@@ -69,7 +94,13 @@ export type GeneratedTestCase = {
   given: string;
   when: string;
   then: string;
+  /** Concrete input data of the test constellation (e.g. AU periods). */
+  testData: ExpectedField[];
+  /** Ordered procedure / message flow; empty when not applicable. */
+  steps: TestStep[];
   expectedFields: ExpectedField[];
+  /** Criterion identifiers from the source that this case covers (e.g. UUIDs). */
+  criteriaIds: string[];
   priority: Priority;
   priorityReason: string;
   reasoning: ReasoningStep[];
@@ -102,7 +133,16 @@ export type GenerationSettings = {
   useFeedback: boolean;
 };
 
-export type ChangeKind = "Generierung" | "Prüfung" | "Einstellungen" | "Zurücksetzen";
+export const CHANGE_KINDS = [
+  "Dokument",
+  "Extraktion",
+  "Anforderung",
+  "Generierung",
+  "Prüfung",
+  "Einstellungen",
+  "Zurücksetzen",
+] as const;
+export type ChangeKind = (typeof CHANGE_KINDS)[number];
 
 export type ChangeLogEntry = {
   id: string;
