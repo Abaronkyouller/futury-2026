@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { DragEvent } from "react";
-import { FileText, Sparkles, Trash2, Upload } from "lucide-react";
+import { FileText, Layers, Search, Sparkles, Trash2, Upload } from "lucide-react";
 import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
 import { GeneratedCaseCard } from "../components/GeneratedCaseCard";
@@ -15,8 +15,8 @@ import { useGeneration } from "../state/useGeneration";
 import { DOC_ROLES } from "../types/document";
 import type { DocKind, DocRole, SourceDocument } from "../types/document";
 import type { Req } from "../types/requirement";
+import type { GeneratedTestCase } from "../types/review";
 import { PRIORITIES } from "../types/review";
-import { isHiddenConditionFailureCase } from "../utils/caseText";
 
 const KIND_HINT: Record<DocKind, string> = {
   Fachlich: "Rechtliche/fachliche Vorgaben",
@@ -29,11 +29,57 @@ const ROLE_HINT: Record<DocRole, string> = {
 };
 const fmt = (n: number) => n.toLocaleString("de-DE");
 
-/** Filter value that shows the cases of every source section. */
-const ALL_SECTIONS = "__all__";
-
-/** Category for a case whose requirement names no source section. */
+/**
+ * Category for a case whose requirement names no source section. Cases are
+ * grouped by their source section (the "Quelle" of the requirement).
+ */
 const NO_SECTION = "Ohne Abschnittsangabe";
+
+/**
+ * Page numbers to show: the first and last page plus a window around the
+ * current page. `null` marks an elided range (rendered as an ellipsis).
+ */
+function pageNumbers(page: number, pageCount: number, windowSize = 5): (number | null)[] {
+  const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  if (pageCount <= windowSize + 2) return range(1, pageCount);
+  if (page <= windowSize - 1) return [...range(1, windowSize), null, pageCount];
+  if (page >= pageCount - windowSize + 2) return [1, null, ...range(pageCount - windowSize + 1, pageCount)];
+  const half = Math.floor(windowSize / 2);
+  return [1, null, ...range(page - half, page + half), null, pageCount];
+}
+
+/** Numbered pagination: previous, 1…n, next and the current page number. */
+function Pager({ page, pageCount, total, onPage }: { page: number; pageCount: number; total: number; onPage: (page: number) => void }) {
+  return <nav className="pager" aria-label="Seitennavigation">
+    <button disabled={page <= 1} onClick={() => onPage(page - 1)}>←</button>
+    {pageNumbers(page, pageCount).map((p, i) => p === null
+      ? <span key={`gap-${i}`} className="gap">…</span>
+      : <button key={p} className={p === page ? "active" : ""} aria-current={p === page ? "page" : undefined} onClick={() => onPage(p)}>{p}</button>)}
+    <button disabled={page >= pageCount} onClick={() => onPage(page + 1)}>→</button>
+    <span className="pagerinfo">Seite {page} von {pageCount} · {total} Testfall/Testfälle</span>
+  </nav>;
+}
+
+/**
+ * One source section with the test cases derived from it. Each section is
+ * paginated on its own (at most CASES_PER_PAGE cases per page) and its cases
+ * start collapsed.
+ */
+function SectionGroup({ label, cases, showReasoning }: { label: string; cases: GeneratedTestCase[]; showReasoning: boolean }) {
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(cases.length / CASES_PER_PAGE));
+  const currentPage = Math.min(page, pageCount);
+  const pageCases = cases.slice((currentPage - 1) * CASES_PER_PAGE, currentPage * CASES_PER_PAGE);
+  return <section className="casegroup">
+    <div className="grouphead">
+      <Layers size={16} />
+      <h4>{label}</h4>
+      <span className="groupcount">{cases.length} Testfall/Testfälle</span>
+    </div>
+    {pageCases.map((c) => <GeneratedCaseCard key={c.id} item={c} showReasoning={showReasoning} collapsible showStatuses={false} showTitle={false} />)}
+    <Pager page={currentPage} pageCount={pageCount} total={cases.length} onPage={setPage} />
+  </section>;
+}
 
 function UploadArea() {
   const { addFiles } = useDocuments();
@@ -82,7 +128,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   const ids = useMemo(() => new Set(docReqs.map((r) => r.id)), [docReqs]);
   const docCases = useMemo(
     () => store.cases
-      .filter((c) => ids.has(c.requirementId) && !isHiddenConditionFailureCase(c))
+      .filter((c) => ids.has(c.requirementId))
       .sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || b.origin.generatedAt.localeCompare(a.origin.generatedAt)),
     [store.cases, ids],
   );
@@ -107,15 +153,15 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [showReasoning, setShowReasoning] = useState(true);
-  const [sectionFilter, setSectionFilter] = useState(ALL_SECTIONS);
-  const [page, setPage] = useState(1);
-
-  // A filter naming a section that no longer exists falls back to all sections.
-  const activeFilter = sectionFilter === ALL_SECTIONS || sourceSections.some((s) => s.label === sectionFilter) ? sectionFilter : ALL_SECTIONS;
-  const visibleCases = activeFilter === ALL_SECTIONS ? docCases : docCases.filter((c) => (sectionByReq.get(c.requirementId) ?? NO_SECTION) === activeFilter);
-  const pageCount = Math.max(1, Math.ceil(visibleCases.length / CASES_PER_PAGE));
-  const currentPage = Math.min(page, pageCount);
-  const pageCases = visibleCases.slice((currentPage - 1) * CASES_PER_PAGE, currentPage * CASES_PER_PAGE);
+  /** Writable filter; only the first matching source section is visible. */
+  const [sectionQuery, setSectionQuery] = useState("");
+  const normalizedQuery = sectionQuery.trim().toLocaleLowerCase("de-DE");
+  const activeSection = normalizedQuery
+    ? sourceSections.find((s) => s.label.toLocaleLowerCase("de-DE").includes(normalizedQuery))?.label ?? ""
+    : sourceSections[0]?.label ?? "";
+  const activeCases = docCases.filter(
+    (c) => (sectionByReq.get(c.requirementId) ?? NO_SECTION) === activeSection,
+  );
 
   async function extractAll(): Promise<Req[]> {
     const extracted: Req[] = [];
@@ -170,20 +216,20 @@ function Workspace({ doc }: { doc: SourceDocument }) {
     </Panel>
     <Panel>
       <div className="paneltop"><h3>Generierte Testfälle · {docCases.length}</h3><label className="checkrow"><input type="checkbox" checked={showReasoning} onChange={(e) => setShowReasoning(e.target.checked)} /> Begründung anzeigen</label></div>
-      <p className="muted small">Die Fälle sind nach dem Abschnitt der Quelle gruppiert und eingeklappt – ein Klick auf den Kopf klappt einen Fall auf. Jeder Fall enthält Modellbegründung sowie Quellenzitat, Ontologie, Wissensgraph und Regelmodell.</p>
+      <p className="muted small">Es wird jeweils ein Abschnitt der Quelle angezeigt. Ein Klick auf den Kopf klappt einen Testfall auf. Pro Seite erscheinen maximal {CASES_PER_PAGE} Testfälle. Jeder Fall enthält Modellbegründung sowie Quellenzitat, Ontologie, Wissensgraph und Regelmodell.</p>
       {!docCases.length ? <p className="muted">Noch keine Testfälle. Starten Sie oben die Analyse.</p> : <>
-        <div className="docmeta">
-          <label className="field inline">Abschnitt der Quelle<select value={activeFilter} onChange={(e) => { setSectionFilter(e.target.value); setPage(1); }}>
-            <option value={ALL_SECTIONS}>Alle Abschnitte · {docCases.length}</option>
-            {sourceSections.map((s) => <option key={s.label} value={s.label}>{s.label} · {s.count}</option>)}
-          </select></label>
-          <span className="muted small">{visibleCases.length} Testfall/Testfälle · Seite {currentPage}/{pageCount}</span>
-          <div className="actions">
-            <button disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>← Zurück</button>
-            <button disabled={currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}>Weiter →</button>
-          </div>
+        <div className="search wide">
+          <Search size={15} />
+          <input list="source-sections" placeholder="Abschnitt der Quelle eingeben, z. B. „Inhalt der Leistung“" value={sectionQuery} onChange={(e) => setSectionQuery(e.target.value)} />
+          <datalist id="source-sections">{sourceSections.map((s) => <option key={s.label} value={s.label}>{s.count} Testfall/Testfälle</option>)}</datalist>
         </div>
-        {pageCases.map((c) => <GeneratedCaseCard key={c.id} item={c} showReasoning={showReasoning} collapsible showStatuses={false} showTitle={false} />)}
+        <div className="docmeta">
+          <span className="muted small">{sourceSections.length} Abschnitt(e) der Quelle · {docCases.length} Testfall/Testfälle</span>
+          {sectionQuery && <button onClick={() => setSectionQuery("")}>Filter zurücksetzen</button>}
+        </div>
+        {activeSection
+          ? <div className="casegroups"><SectionGroup key={activeSection} label={activeSection} cases={activeCases} showReasoning={showReasoning} /></div>
+          : <p className="muted">Kein Abschnitt der Quelle enthält „{sectionQuery}“.</p>}
       </>}
     </Panel>
   </div>;
@@ -194,7 +240,7 @@ export function DocumentsPage() {
   const { requirements, cases } = useReviewStore();
   const [activeId, setActiveId] = useState<string | null>(null);
   const active = documents.find((d) => d.id === activeId) ?? documents[documents.length - 1];
-  const caseCount = (doc: SourceDocument) => { const ids = new Set(requirements.filter((r) => r.origin?.documentId === doc.id).map((r) => r.id)); return cases.filter((c) => ids.has(c.requirementId) && !isHiddenConditionFailureCase(c)).length; };
+  const caseCount = (doc: SourceDocument) => { const ids = new Set(requirements.filter((r) => r.origin?.documentId === doc.id).map((r) => r.id)); return cases.filter((c) => ids.has(c.requirementId)).length; };
   return <>
     <Header title="Dokumente & Testfälle" subtitle="Spezifikation hochladen, alle Abschnitte automatisch analysieren und Testfälle mit Modellbegründung und Quellennachweis erhalten." />
     <div className="chips"><span>1 Hochladen</span><span>2 Testfälle erzeugen</span><span>3 Testfälle prüfen</span><span className="warm">Ergebnisse sind Vorschläge – Prüfer/in entscheidet</span></div>

@@ -20,7 +20,7 @@ export const EXTRACTION_CHAR_BUDGET = 12000;
 export const GENERATION_CONTEXT_CHARS = 4000;
 
 /** Generated cases shown per page in the workspace list of "Dokumente & Testfälle". */
-export const CASES_PER_PAGE = 10;
+export const CASES_PER_PAGE = 5;
 
 /** Upper bound for requirements per extraction run. */
 export const MAX_REQUIREMENTS_PER_RUN = 8;

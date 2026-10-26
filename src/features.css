@@ -126,6 +126,18 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-size: 11px; max-h
 .gencase .paneltop.clickable:hover .gentitle { color: var(--primary); }
 .gencase .casemark { color: var(--muted); font-size: 11px; }
 .gencase .given { margin: 14px 0; }
+/* Source-section categories in the workspace: heading, collapsed cases, own pagination. */
+.casegroups { display: grid; gap: 14px; margin-top: 12px; }
+.casegroup { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px 14px; background: var(--surface-2); }
+.casegroup .gencase { background: var(--surface); }
+.grouphead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); color: var(--primary-ink); }
+.grouphead h4 { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.groupcount { font-size: 11px; font-weight: 700; border-radius: 20px; padding: 3px 9px; background: var(--primary-soft); color: var(--primary-ink); }
+.pager { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.pager button { min-width: 34px; padding: 7px 10px; font-variant-numeric: tabular-nums; }
+.pager button.active { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 700; }
+.pager .gap { color: var(--muted); }
+.pagerinfo { margin-left: auto; color: var(--muted); font-size: 12px; }
 .gentitle { margin: 6px 0 0; font-size: 15px; }
 .badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
 .tags .origin-ai { background: var(--generated-bg); color: var(--generated); }

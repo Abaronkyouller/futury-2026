@@ -29,3 +29,20 @@ export function isHiddenConditionFailureCase(item: ConditionCase): boolean {
 export function sanitizeCaseTitle(title: string): string {
   return isHiddenCaseTitle(title) ? "" : title;
 }
+
+/** Numbered condition row produced by the rule-based derivation ("Bedingung 2: …"). */
+const CONDITION_ROW = /^Bedingung\s+\d+\b/i;
+
+/**
+ * True for the condition bookkeeping rows ("erfüllt" / "nicht erfüllt") that the
+ * rule-based derivation adds per source condition. They restate the source and
+ * are neither test data nor an expected result, so they are not shown.
+ */
+export function isConditionStatusRow(row: { field: string; value: string }): boolean {
+  return CONDITION_ROW.test(row.field) && /^(nicht\s+)?erfüllt$/i.test(row.value.trim());
+}
+
+/** Field rows a reviewer sees: without the condition bookkeeping rows. */
+export function visibleFields<T extends { field: string; value: string }>(rows: T[]): T[] {
+  return rows.filter((row) => !isConditionStatusRow(row));
+}

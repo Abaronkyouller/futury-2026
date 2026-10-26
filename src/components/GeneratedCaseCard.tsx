@@ -9,7 +9,7 @@ import { expectedStatus } from "../reasoning/expectedStatus";
 import { CaseBackendDetails } from "./CaseBackendDetails";
 import { Status } from "./Status";
 import { formatDateTime } from "../utils/format";
-import { sanitizeCaseTitle } from "../utils/caseText";
+import { sanitizeCaseTitle, visibleFields } from "../utils/caseText";
 
 /** CSS modifier per priority flag. */
 const PRIORITY_CLASS: Record<Priority, string> = { Hoch: "bad", Mittel: "warn", Niedrig: "neutral" };
@@ -64,7 +64,11 @@ export function GeneratedCaseCard({
   showReasoning: boolean;
   /** Start collapsed and expand on click (used by the workspace list on the documents page). */
   collapsible?: boolean;
-  /** Hide review/priority/execution/expected-result statuses in the document workspace. */
+  /**
+   * Hide the detailed statuses (origin, execution, expected-result status) in the
+   * document workspace body. Priority and review status stay in the header so a
+   * collapsed case still shows them.
+   */
   showStatuses?: boolean;
   /** Hide the generated scenario title beneath the test-case ID. */
   showTitle?: boolean;
@@ -79,6 +83,8 @@ export function GeneratedCaseCard({
   // Computed from the case origin and the requirement's source, not a fixed label.
   const expected = expectedStatus(item, req);
   const displayTitle = sanitizeCaseTitle(item.title);
+  // Condition bookkeeping rows are not test data (see utils/caseText.ts).
+  const testData = visibleFields(item.testData);
 
   return (
     <div className={`gencase ${ORIGIN_CLASS[kind]} ${showStatuses && item.review.decision === "Abgelehnt" ? "rejected" : ""} ${collapsible && !open ? "collapsed" : ""}`}>
@@ -103,10 +109,11 @@ export function GeneratedCaseCard({
           <code>{item.id}</code>
           {showTitle && displayTitle && <h4 className="gentitle">{displayTitle}</h4>}
         </div>
+        {/* Priority and review status stay visible while the case is collapsed. */}
         <div className="badges">
           {collapsible && <span className="casemark">{open ? "▲" : "▼"}</span>}
-          {showStatuses && <PriorityBadge value={item.priority} />}
-          {showStatuses && <Status value={item.review.decision} />}
+          <PriorityBadge value={item.priority} />
+          <Status value={item.review.decision} />
         </div>
       </div>
       {open && <>
@@ -131,10 +138,10 @@ export function GeneratedCaseCard({
         <p>{item.then || "—"}</p>
       </div>
 
-      {item.testData.length > 0 && (
+      {testData.length > 0 && (
         <>
           <h5 className="minihead">TESTDATEN</h5>
-          <FieldTable rows={item.testData} />
+          <FieldTable rows={testData} />
         </>
       )}
 

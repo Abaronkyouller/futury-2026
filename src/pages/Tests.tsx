@@ -10,7 +10,7 @@ import { ORIGIN_LABEL, PRIORITIES } from "../types/review";
 import type { GeneratedTestCase, ReviewDecision } from "../types/review";
 import { download } from "../utils/download";
 import { toCsv } from "../utils/format";
-import { isHiddenConditionFailureCase, sanitizeCaseTitle } from "../utils/caseText";
+import { sanitizeCaseTitle, visibleFields } from "../utils/caseText";
 
 const FILTERS = ["Alle", "Offen", "Akzeptiert", "Abgelehnt"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -29,7 +29,7 @@ function exportPlan(cases: GeneratedTestCase[], sourceOf: (id: string) => string
     c.given,
     c.when,
     c.then,
-    c.testData.map((f) => `${f.field}: ${f.value}`).join(" | "),
+    visibleFields(c.testData).map((f) => `${f.field}: ${f.value}`).join(" | "),
     c.steps.map((s, i) => `${i + 1}. ${s.actor}: ${s.action}${s.abgabegrund ? ` (Abgabegrund ${s.abgabegrund})` : ""}`).join(" | "),
     c.expectedFields.map((f) => `${f.field}: ${f.value}`).join(" | "),
     c.criteriaIds.join(" | "),
@@ -53,13 +53,13 @@ export function Tests() {
   const [filter, setFilter] = useState<Filter>("Alle");
   const [selected, setSelected] = useState<string | null>(null);
 
-  const shownCases = cases.filter((c) => !isHiddenConditionFailureCase(c));
+  const shownCases = cases;
   const visible = shownCases
     .filter((c) => filter === "Alle" || c.review.decision === (filter as ReviewDecision))
     .sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.id.localeCompare(b.id));
   const active = shownCases.find((c) => c.id === selected) ?? visible[0];
   const sourceOf = (id: string) => requirements.find((r) => r.id === id)?.source ?? "";
-  const exportable = cases.filter((c) => !isHiddenConditionFailureCase(c) && c.review.decision !== "Abgelehnt");
+  const exportable = cases.filter((c) => c.review.decision !== "Abgelehnt");
 
   return (
     <>

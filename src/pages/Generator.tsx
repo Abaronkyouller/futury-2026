@@ -12,7 +12,6 @@ import type { GenerationSettings, OriginKind, Technique } from "../types/review"
 import { buildMessages } from "../ai/prompt";
 import { useReviewStore } from "../state/reviewContext";
 import { useGeneration } from "../state/useGeneration";
-import { isHiddenConditionFailureCase } from "../utils/caseText";
 
 /**
  * Test-case generator (H2/H3). The examiner picks a requirement, adjusts how
@@ -42,7 +41,7 @@ export function Generator() {
   const messages = buildMessages(req, draft, reviewed);
 
   const reqCases = store.cases
-    .filter((c) => c.requirementId === req.id && !isHiddenConditionFailureCase(c))
+    .filter((c) => c.requirementId === req.id)
     .sort(
       (a, b) =>
         PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) ||

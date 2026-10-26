@@ -3,7 +3,7 @@ import type { GeneratedTestCase } from "../types/review";
 import { ORIGIN_LABEL } from "../types/review";
 import { cases as sampleCases } from "../data/testCases";
 import { OPEN_VALUE_MARKER } from "../config/ai";
-import { isHiddenConditionFailureCase, sanitizeCaseTitle } from "./caseText";
+import { sanitizeCaseTitle } from "./caseText";
 
 /**
  * Builds the traceability chain for one requirement:
@@ -175,7 +175,7 @@ function spineFor(req: Req): TraceNode[] {
 export function buildTraceGraph(req: Req, generated: GeneratedTestCase[]): TraceGraph {
   const lanes = [
     ...sampleCasesFor(req).map(sampleLane),
-    ...generated.filter((c) => c.requirementId === req.id && c.review.decision !== "Abgelehnt" && !isHiddenConditionFailureCase(c)).map(generatedLane),
+    ...generated.filter((c) => c.requirementId === req.id && c.review.decision !== "Abgelehnt").map(generatedLane),
   ];
   return { spine: spineFor(req), lanes };
 }

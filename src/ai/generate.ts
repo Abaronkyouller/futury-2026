@@ -12,7 +12,8 @@ import { buildMessages } from "./prompt";
 import { deriveRuleCases } from "./ruleCases";
 import { isRequirementId, runChecks } from "./validate";
 import { buildCaseTrace } from "../reasoning/trace";
-import { isHiddenConditionFailureCase, sanitizeCaseTitle } from "../utils/caseText";
+import { sanitizeCaseTitle } from "../utils/caseText";
+import { PRIORITIES } from "../types/review";
 
 export type GenerationRun = {
   runId: string;
@@ -20,6 +21,11 @@ export type GenerationRun = {
   /** Raw reply text (or the rule-based JSON), kept so the examiner can inspect exactly what was produced. */
   rawReply: string;
 };
+
+/** Priorities are intentionally assigned at random for this prototype. */
+function randomPriority() {
+  return PRIORITIES[Math.floor(Math.random() * PRIORITIES.length)] ?? "Mittel";
+}
 
 /** Sortable run id with milliseconds, e.g. "R20261026-172233-481", so quick successive runs never collide. */
 export function newRunId(now: Date): string {
@@ -69,7 +75,7 @@ export async function generateTestCases(
   const reqNo = req.id.split("-").pop();
   const model = kind === "model" ? settings.model : kind;
 
-  const cases: GeneratedTestCase[] = raw.filter((c) => !isHiddenConditionFailureCase(c)).map((c, i) => {
+  const cases: GeneratedTestCase[] = raw.map((c, i) => {
     const id = `${kind === "regelbasiert" ? "RB" : "AI"}-${reqNo}-${runId.slice(10).replace("-", "")}-${i + 1}`;
     const clean = {
       ...c,
@@ -80,7 +86,8 @@ export async function generateTestCases(
       ...clean,
       id,
       requirementId: req.id,
-      priority: clean.priority ?? "Hoch",
+      priority: randomPriority(),
+      priorityReason: "Für den Prototyp bei der Erstellung zufällig zugewiesen.",
       checks: runChecks(clean, req, settings),
       trace: buildCaseTrace(req, clean, { kind, model }, id),
       origin: { kind, model, runId, generatedAt: now.toISOString() },

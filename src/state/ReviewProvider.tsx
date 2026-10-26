@@ -6,7 +6,7 @@ import type { Req } from "../types/requirement";
 import type { ChangeLogEntry, GeneratedTestCase, GenerationSettings } from "../types/review";
 import { ReviewContext } from "./reviewContext";
 import type { LogInput, ReviewState, ReviewStore } from "./reviewContext";
-import { isHiddenConditionFailureCase, sanitizeCaseTitle } from "../utils/caseText";
+import { sanitizeCaseTitle } from "../utils/caseText";
 
 const EMPTY: ReviewState = {
   requirements: sampleRequirements,
@@ -43,7 +43,7 @@ function load(): ReviewState {
     const parsed = JSON.parse(raw) as Partial<ReviewState>;
     return {
       requirements: parsed.requirements ?? sampleRequirements,
-      cases: (parsed.cases ?? []).filter((c) => !isHiddenConditionFailureCase(c)).map(normalizeCase),
+      cases: (parsed.cases ?? []).map(normalizeCase),
       changelog: parsed.changelog ?? [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings, model: AI_MODEL },
     };
