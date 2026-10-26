@@ -4,7 +4,7 @@
 We are building an AI-based prototype in the Hackathon repository for the ITSG Futury Hackathon. The prototype is a static frontend that illustrates a possible AI review assistant for payroll-software system review of income replacement benefits (Entgeltersatzleistungen). It is not a complete implementation, and many decisions remain open.
 This file guides AI coding agents on the ITSG Futury Hackathon project: an AI review assistant for payroll-software system review of income replacement benefits (Entgeltersatzleistungen).
 
-Status: product scope and domain rules are still unconfirmed, but this repository already contains a static frontend prototype. Treat its UI copy, sample requirements, rules, test cases, and validation results as illustrative. There is no backend, AI model, rule engine, database, payroll integration, or persistence. Owner decisions D1-D6 remain open.
+Status: product scope and domain rules are still unconfirmed, but this repository already contains a static frontend prototype. Treat its UI copy, sample requirements, rules, test cases, and validation results as illustrative. There is no backend, rule engine, database, or payroll integration. Since 2026-10-26 an AI test-case generator calls the hessian.ai gateway through the Vite dev/preview proxy, and generated cases, feedback and the change log persist in browser localStorage only. Owner decisions are partly confirmed; see "Confirmed owner answers" below.
 
 Read the source material before implementing a domain rule. Ask the owner when a decision affects scope, architecture, expected results, or an external integration. Continue independent work that does not depend on the answer. Record confirmed answers here.
 
@@ -101,6 +101,15 @@ Ask these questions before implementing dependent features. The owner may explic
 | D5 | Authoritative domain references and version: confirm that 13.4/13.3/GG 13.1 are authoritative, how the DOCX-vs-13.4 conflicts will be resolved, and whether uncertain rules should stay blocked in the demonstration. |
 | D6 | Language: the language of this instruction file, the interface, explanations, and test reports. German domain terms and source identifiers must remain traceable regardless of presentation language. |
 
+## Confirmed owner answers
+
+Recorded 2026-10-26. Anything not listed here is still open.
+
+- D2 (partial): Extend the existing React + Vite + TypeScript repository. AI provider is the hessian.ai inference gateway (OpenAI-compatible `/v1/chat/completions`), models `vllm/Kolibri-1` and `vllm/GLM-Flash:Latest` from the Team 7 handout. The API key must never be committed or bundled: it lives in the untracked `.env.local` as `HAI_API_KEY` and is injected by the Vite proxy (`/api/llm` → gateway `/v1`). No backend, storage or graph technology has been chosen; persistence is browser localStorage.
+- D3 (partial): Implement now: AI test-case generation with adjustable reasoning and `Impact/Priority` flags (interpreted as test prioritization: `Hoch`/`Mittel`/`Niedrig` with a reason); examiner feedback that is fed back into later prompts (in-context, no model training); a timestamped change log; an interactive traceability graph. German UI and ITSG colours were not selected for this iteration; they stay planned.
+- D1/D5 (deferred): The DBVO DOCX, organizer PDF and DTA EEL references were not available on the working machine. Domain content stays illustrative sample data; DBVO rules remain unresolved and must not be invented.
+- D4, D6: still open. The current UI copy is English; prompts and generated content are German.
+
 ## Repository and commands
 
 Verified against the current repository:
@@ -118,8 +127,12 @@ Verified against the current repository:
 
 - Entry: `src/main.tsx` → `src/App.tsx` (`BrowserRouter`) → `src/pages/*`.
 - Routes live in `src/App.tsx`; sidebar links live in `src/components/Sidebar.tsx`. Add or rename pages in both. Unknown routes render `Overview`.
-- `src/components/` holds `Header`, `Panel`, `Sidebar`, and `Status`; `src/data/` holds demo rows; `src/types/` holds shared types; `src/utils/download.ts` handles file exports.
-- All UI actions are illustrative: requirement approval/rejection only changes local state and fires an `alert`; the test-plan button downloads a CSV; the validation file input only stores the filename; "Export PDF" calls `window.print()`; the library and graph pages are static. There are no `fetch` calls, database access, AI calls, or persistence.
+- `src/components/` holds `Header`, `Panel`, `Sidebar`, `Status` and `GeneratedCaseCard`; `src/data/` holds demo rows; `src/types/` holds shared types (`review.ts` for generated cases, feedback and change log); `src/utils/` holds `download.ts`, `format.ts` (dates, quoted CSV) and `traceGraph.ts` (graph model).
+- AI flow: `src/ai/prompt.ts` (prompt + JSON contract + feedback block) → `client.ts` (fetch via proxy) → `parse.ts` (defensive JSON normalization) → `validate.ts` (deterministic structure/traceability checks, not payroll correctness) → `generate.ts` (wraps results with origin, run id, review state). `offlineDemo.ts` is a canned reply labelled as simulated. Constants are in `src/config/ai.ts`.
+- State: `src/state/ReviewProvider.tsx` wraps the app; use `useReviewStore()` from `src/state/reviewContext.ts`. Every generation, review and settings change appends a change-log entry with before/after values.
+- Pages added: `/generate` (AI test generator), `/changelog` (change log); `/graph` is now an interactive traceability graph. New styles live in `src/features.css`.
+- The original pages remain illustrative: requirement approval/rejection only changes local state and fires an `alert`; the test-plan button downloads a CSV; the validation file input only stores the filename; "Export PDF" calls `window.print()`; the library page is static. The only network call is the AI generator's request to `/api/llm`, which works only under `npm run dev` / `npm run preview` (a static `dist/` deployment has no proxy).
+- Local setup: copy `.env.example` to `.env.local` and set `HAI_API_KEY`, then restart the dev server.
 - All styling is in the one-line minified `src/style.css`, imported by `src/main.tsx`. `src/App.css` and `src/index.css` are unused Vite scaffold leftovers; edits there have no effect.
 - `BrowserRouter` means a deployed `dist/` needs an SPA fallback to `index.html` for deep links. No deploy config is checked in.
 
@@ -127,7 +140,7 @@ Verified against the current repository:
 
 - TypeScript enforces `verbatimModuleSyntax` (use `import type`), `erasableSyntaxOnly` (no enums, namespaces, or constructor parameter properties), `noUnusedLocals`, and `noUnusedParameters`.
 - Components use named exports, not default exports. No formatter is configured; match the existing double quotes, semicolons, and 2-space indentation.
-- `Status` badge colors depend on exact values matched in `src/components/Status.tsx` (`Offene`, `Genehmigt`, `Abgelehnt`, `In Bearbeitung`, `In Überprüfung`). New status strings render neutral unless that mapping is extended.
+- `Status` badge colors come from the `STATUS_CLASS` map in `src/components/Status.tsx` (English sample values plus `Offen`, `Akzeptiert`, `Genehmigt`, `Abgelehnt`, `In Bearbeitung`, `In Überprüfung`). New status strings render neutral unless that map is extended.
 - `src/data/pipeline.ts` and `src/data/testCases.ts` are untyped tuple arrays read by position; changing a row shape requires updating every consumer, including the CSV export.
 - The CSV export joins fields with commas without quoting; avoid commas in tuple fields or update `src/utils/download.ts` / the export call.
 - UI labels with German legal/domain terms (`Krankengeld`, `Bemessungszeitraum`, etc.). Keep German field names intact, especially in validation/export data.

@@ -1,0 +1,103 @@
+/*
+ * Styles for the AI generator, change log and traceability graph.
+ * Kept separate from the minified src/style.css so they stay readable.
+ * Colours follow the existing palette in style.css.
+ */
+
+:root {
+  --primary: #20547a;
+  --border: #e0e5e9;
+  --muted: #71808c;
+  --source: #237a4a;
+  --source-bg: #e5f5ea;
+  --assumption: #946b21;
+  --assumption-bg: #fff3dc;
+  --generated: #5a4fa8;
+  --generated-bg: #eeecfb;
+  --missing: #9aa5ae;
+}
+
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+.small { font-size: 12px; }
+.spaced, .panel h3.spaced { margin-top: 24px; }
+.heading .actions { flex-wrap: nowrap; }
+.full { width: 100%; }
+select.full, .field select { padding: 10px; border: 1px solid #dce2e8; border-radius: 6px; background: #fff; margin: 0 0 12px; }
+
+/* ---------- Generator ---------- */
+.gengrid { display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 18px; align-items: start; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #55616b; margin: 12px 0; }
+.field select { margin: 0; }
+.checkrow { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; align-items: center; color: #55616b; }
+.checkrow label { display: inline-flex; gap: 5px; align-items: center; }
+.errortext { color: #aa3035; font-size: 12px; }
+.errorbox { background: #fde7e7; border-color: #f5c7c9; }
+.errorbox p { word-break: break-word; }
+pre.wrap { white-space: pre-wrap; word-break: break-word; font-size: 11px; max-height: 320px; overflow: auto; }
+.checks { margin-top: 12px; font-size: 12px; }
+.checks summary { cursor: pointer; color: var(--primary); font-weight: 600; }
+.checks ul { list-style: none; padding-left: 4px; }
+.checks li.ok { color: var(--source); }
+.checks li.fail { color: #aa3035; }
+.checkfail { color: #aa3035; }
+.minihead { color: #687681; letter-spacing: 0.4px; margin: 16px 0 8px; font-size: 11px; }
+
+.gencase { border: 1px solid var(--border); border-left: 4px solid var(--generated); border-radius: 10px; padding: 18px; margin: 14px 0; background: #fff; }
+.gencase.rejected { opacity: 0.6; border-left-color: #aa3035; }
+.gencase textarea { width: 100%; min-height: 60px; margin: 12px 0 8px; border: 1px solid #dce2e8; border-radius: 6px; padding: 10px; }
+.gencase .given { margin: 14px 0; }
+.gentitle { margin: 6px 0 0; font-size: 15px; }
+.badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.tags .origin-ai { background: var(--generated-bg); color: var(--generated); }
+.tags .origin-demo { background: #fff2d8; color: #8d6825; }
+tr.openvalue td { background: var(--assumption-bg); color: var(--assumption); }
+
+.reasoning { padding-left: 20px; font-size: 13px; line-height: 1.6; }
+.reasoning li { margin-bottom: 6px; }
+.basis { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 6px; margin-right: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+.basis-source { background: var(--source-bg); color: var(--source); }
+.basis-assumption { background: var(--assumption-bg); color: var(--assumption); }
+.basis-generated { background: var(--generated-bg); color: var(--generated); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 12px; color: var(--muted); margin: 6px 0 14px; }
+
+/* ---------- Change log ---------- */
+.timeline { list-style: none; padding: 0; margin: 0; }
+.timeline li { display: grid; grid-template-columns: 170px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid #edf0f2; }
+.timeline time { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.kind { font-size: 11px; font-weight: 700; border-radius: 20px; padding: 3px 9px; margin-right: 8px; }
+.kind-gen { background: var(--generated-bg); color: var(--generated); }
+.kind-review { background: var(--source-bg); color: var(--source); }
+.kind-settings { background: #e6edf4; color: #365c7a; }
+.kind-reset { background: #fde7e7; color: #aa3035; }
+.detail.compact td, .detail.compact th { padding: 7px 10px; }
+.detail.compact th { width: 90px; }
+
+/* ---------- Traceability graph ---------- */
+.graphgrid { display: grid; grid-template-columns: 1fr 340px; gap: 18px; align-items: start; }
+.graphpanel { overflow-x: auto; }
+.spine, .lane { display: flex; align-items: stretch; gap: 8px; }
+.spine { margin-bottom: 26px; }
+.lanes { display: flex; flex-direction: column; gap: 10px; border-left: 2px solid #d5dde4; padding-left: 14px; }
+.lane, .lanehead { display: grid; grid-template-columns: minmax(130px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(110px, 1fr); gap: 6px; }
+.lanehead { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.lane .tnode { width: auto; }
+.tnode { width: 180px; flex-shrink: 0; text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; font-weight: 500; font-size: 12px; background: #fff; }
+.tnode small { font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); }
+.tnode span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.tactive { box-shadow: 0 0 0 3px #b8cede; }
+.tarrow { align-self: center; color: var(--muted); }
+.ev-sample { border: 2px solid #8fb1cc; background: #f2f7fb; }
+.ev-ai { border: 2px dashed var(--generated); background: var(--generated-bg); }
+.ev-demo { border: 2px dashed #c49a3c; background: #fff8e8; }
+.ev-missing { border: 2px dotted var(--missing); background: #f7f8f9; color: var(--muted); }
+.swatch { display: inline-block; width: 22px; height: 14px; border-radius: 4px; vertical-align: middle; }
+.legenditem { display: inline-flex; align-items: center; gap: 6px; }
+.evtag { display: inline-block; font-size: 11px; border-radius: 6px; padding: 4px 8px; margin-bottom: 12px; }
+
+@media (max-width: 1100px) {
+  .gengrid, .graphgrid { grid-template-columns: 1fr; }
+  .timeline li { grid-template-columns: 1fr; gap: 4px; }
+}
+
+label.checkrow { flex-wrap: nowrap; align-items: flex-start; }
+label.checkrow input { margin-top: 2px; }
