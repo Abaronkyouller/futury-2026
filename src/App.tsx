@@ -1,0 +1,29 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Sidebar } from "./components/Sidebar";
+import { Overview } from "./pages/Overview";
+import { Requirements } from "./pages/Requirements";
+import { Tests } from "./pages/Tests";
+import { Validation } from "./pages/Validation";
+import { LibraryPage } from "./pages/LibraryPage";
+import { GraphPage } from "./pages/GraphPage";
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <div className="layout">
+        <Sidebar />
+        <main>
+          <Routes>
+            <Route path="/" element={<Overview />} />
+            <Route path="/requirements" element={<Requirements />} />
+            <Route path="/tests" element={<Tests />} />
+            <Route path="/validation" element={<Validation />} />
+            <Route path="/library" element={<LibraryPage />} />
+            <Route path="/graph" element={<GraphPage />} />
+            <Route path="*" element={<Overview />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
+  );
+}
