@@ -3,6 +3,7 @@ import type { GeneratedTestCase } from "../types/review";
 import { ORIGIN_LABEL } from "../types/review";
 import { cases as sampleCases } from "../data/testCases";
 import { OPEN_VALUE_MARKER } from "../config/ai";
+import { isHiddenConditionFailureCase, sanitizeCaseTitle } from "./caseText";
 
 /**
  * Builds the traceability chain for one requirement:
@@ -107,7 +108,7 @@ function generatedLane(c: GeneratedTestCase): TraceNode[] {
   const open = c.expectedFields.filter((f) => f.value.includes(OPEN_VALUE_MARKER)).length;
   return [
     {
-      id: c.id, kind: "Testfall", label: `${c.id} · ${c.title}`, evidence,
+      id: c.id, kind: "Testfall", label: [c.id, sanitizeCaseTitle(c.title)].filter(Boolean).join(" · "), evidence,
       details: [
         ["Herkunft", `${ORIGIN_LABEL[c.origin.kind]} · ${c.origin.model} · Lauf ${c.origin.runId}`],
         ["Priorität", `${c.priority} – ${c.priorityReason || "ohne Begründung"}`],
@@ -174,7 +175,7 @@ function spineFor(req: Req): TraceNode[] {
 export function buildTraceGraph(req: Req, generated: GeneratedTestCase[]): TraceGraph {
   const lanes = [
     ...sampleCasesFor(req).map(sampleLane),
-    ...generated.filter((c) => c.requirementId === req.id && c.review.decision !== "Abgelehnt").map(generatedLane),
+    ...generated.filter((c) => c.requirementId === req.id && c.review.decision !== "Abgelehnt" && !isHiddenConditionFailureCase(c)).map(generatedLane),
   ];
   return { spine: spineFor(req), lanes };
 }

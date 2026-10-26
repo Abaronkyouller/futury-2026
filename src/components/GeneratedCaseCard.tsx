@@ -9,6 +9,7 @@ import { expectedStatus } from "../reasoning/expectedStatus";
 import { CaseBackendDetails } from "./CaseBackendDetails";
 import { Status } from "./Status";
 import { formatDateTime } from "../utils/format";
+import { sanitizeCaseTitle } from "../utils/caseText";
 
 /** CSS modifier per priority flag. */
 const PRIORITY_CLASS: Record<Priority, string> = { Hoch: "bad", Mittel: "warn", Niedrig: "neutral" };
@@ -52,41 +53,74 @@ function FieldTable({ rows }: { rows: { field: string; value: string }[] }) {
  * message flow, expected values, adjustable reasoning view, rule-based checks
  * and examiner feedback controls.
  */
-export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTestCase; showReasoning: boolean }) {
+export function GeneratedCaseCard({
+  item,
+  showReasoning,
+  collapsible = false,
+  showStatuses = true,
+  showTitle = true,
+}: {
+  item: GeneratedTestCase;
+  showReasoning: boolean;
+  /** Start collapsed and expand on click (used by the workspace list on the documents page). */
+  collapsible?: boolean;
+  /** Hide review/priority/execution/expected-result statuses in the document workspace. */
+  showStatuses?: boolean;
+  /** Hide the generated scenario title beneath the test-case ID. */
+  showTitle?: boolean;
+}) {
   const { reviewCase, requirements } = useReviewStore();
   const [comment, setComment] = useState(item.review.comment);
+  const [open, setOpen] = useState(!collapsible);
   const failed = item.checks.filter((c) => !c.passed);
   const kind = item.origin.kind;
   const req = requirements.find((r) => r.id === item.requirementId);
   const trace = item.trace ?? (req ? buildCaseTrace(req, item, item.origin, item.id) : undefined);
   // Computed from the case origin and the requirement's source, not a fixed label.
   const expected = expectedStatus(item, req);
+  const displayTitle = sanitizeCaseTitle(item.title);
 
   return (
-    <div className={`gencase ${ORIGIN_CLASS[kind]} ${item.review.decision === "Abgelehnt" ? "rejected" : ""}`}>
-      <div className="paneltop">
+    <div className={`gencase ${ORIGIN_CLASS[kind]} ${showStatuses && item.review.decision === "Abgelehnt" ? "rejected" : ""} ${collapsible && !open ? "collapsed" : ""}`}>
+      <div
+        className={"paneltop" + (collapsible ? " clickable" : "")}
+        role={collapsible ? "button" : undefined}
+        tabIndex={collapsible ? 0 : undefined}
+        aria-expanded={collapsible ? open : undefined}
+        onClick={collapsible ? () => setOpen((o) => !o) : undefined}
+        onKeyDown={
+          collapsible
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOpen((o) => !o);
+                }
+              }
+            : undefined
+        }
+      >
         <div>
           <code>{item.id}</code>
-          <h4 className="gentitle">{item.title}</h4>
+          {showTitle && displayTitle && <h4 className="gentitle">{displayTitle}</h4>}
         </div>
         <div className="badges">
-          <PriorityBadge value={item.priority} />
-          <Status value={item.review.decision} />
+          {collapsible && <span className="casemark">{open ? "▲" : "▼"}</span>}
+          {showStatuses && <PriorityBadge value={item.priority} />}
+          {showStatuses && <Status value={item.review.decision} />}
         </div>
       </div>
+      {open && <>
       <div className="tags">
-        <span className={ORIGIN_CLASS[kind]}>
-          {ORIGIN_LABEL[kind]}
-        </span>
+        {showStatuses && <span className={ORIGIN_CLASS[kind]}>{ORIGIN_LABEL[kind]}</span>}
         <span>{item.technique || "Technik fehlt"}</span>
-        <span>{item.execution}</span>
+        {showStatuses && <span>{item.execution}</span>}
         <span>{formatDateTime(item.origin.generatedAt)}</span>
         {item.criteriaIds.map((id) => (
           <span key={id} title="Abgedeckte Kriterium-ID">Kriterium {id}</span>
         ))}
       </div>
-      {req && <div className="case-source"><span><b>Anforderung:</b> {req.id} · {req.title}</span>{trace && <><span><b>Quelle:</b> {trace.source.documentName} · {trace.source.sectionLabel}</span><span className={trace.source.quoteVerified ? "status good" : "status warn"}>{trace.source.quoteVerified ? "Zitat geprüft" : "Zitat ungeprüft"}</span></>}</div>}
-      {item.priorityReason && <p className="muted small">Begründung der Priorität: {item.priorityReason}</p>}
+      {req && <div className="case-source"><span><b>Anforderung:</b> {req.id} · {req.title}</span>{trace && <><span><b>Quelle:</b> {trace.source.documentName} · {trace.source.sectionLabel}</span>{showStatuses && <span className={trace.source.quoteVerified ? "status good" : "status warn"}>{trace.source.quoteVerified ? "Zitat geprüft" : "Zitat ungeprüft"}</span>}</>}</div>}
+      {showStatuses && item.priorityReason && <p className="muted small">Begründung der Priorität: {item.priorityReason}</p>}
 
       <div className="given">
         <b>GEGEBEN</b>
@@ -119,9 +153,9 @@ export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTest
         </>
       )}
 
-      <h5 className="minihead">ERWARTETES ERGEBNIS · {expected.label}</h5>
-      <p className="muted small">{expected.detail}</p>
-      {expected.present && <FieldTable rows={item.expectedFields} />}
+      <h5 className="minihead">ERWARTETES ERGEBNIS{showStatuses ? ` · ${expected.label}` : ""}</h5>
+      {showStatuses && <p className="muted small">{expected.detail}</p>}
+      {expected.present ? <FieldTable rows={item.expectedFields} /> : <p className="muted small">kein erwartetes Ergebnis</p>}
 
       {showReasoning && (
         <>
@@ -165,8 +199,9 @@ export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTest
         <button onClick={() => reviewCase(item.id, "Abgelehnt", comment.trim())}>
           <X size={15} /> Ablehnen
         </button>
-        {item.review.reviewedAt && <small className="muted">Geprüft am {formatDateTime(item.review.reviewedAt)}</small>}
+        {showStatuses && item.review.reviewedAt && <small className="muted">Geprüft am {formatDateTime(item.review.reviewedAt)}</small>}
       </div>
+      </>}
     </div>
   );
 }

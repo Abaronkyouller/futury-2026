@@ -120,6 +120,11 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-size: 11px; max-h
 .gencase.origin-demo { border-left-color: var(--assumption); }
 .gencase.rejected { opacity: 0.6; border-left-color: var(--bad); }
 .gencase textarea { width: 100%; min-height: 60px; margin: 12px 0 8px; }
+/* Collapsible case in the "Dokumente & Testfälle" workspace: header toggles the body. */
+.gencase.collapsed { padding: 12px 18px; }
+.gencase .paneltop.clickable { cursor: pointer; }
+.gencase .paneltop.clickable:hover .gentitle { color: var(--primary); }
+.gencase .casemark { color: var(--muted); font-size: 11px; }
 .gencase .given { margin: 14px 0; }
 .gentitle { margin: 6px 0 0; font-size: 15px; }
 .badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }

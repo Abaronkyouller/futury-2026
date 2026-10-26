@@ -6,6 +6,7 @@ import type { Req } from "../types/requirement";
 import type { ChangeLogEntry, GeneratedTestCase, GenerationSettings } from "../types/review";
 import { ReviewContext } from "./reviewContext";
 import type { LogInput, ReviewState, ReviewStore } from "./reviewContext";
+import { isHiddenConditionFailureCase, sanitizeCaseTitle } from "../utils/caseText";
 
 const EMPTY: ReviewState = {
   requirements: sampleRequirements,
@@ -16,12 +17,22 @@ const EMPTY: ReviewState = {
 
 /** Fills fields added in later versions so older persisted cases stay readable. */
 function normalizeCase(c: GeneratedTestCase): GeneratedTestCase {
+  const title = sanitizeCaseTitle(c.title);
   const original = c.criteriaIds ?? [];
   const criteriaIds = original.filter((id) => !/^ANF-/i.test(id));
   const checks = criteriaIds.length === 0 && criteriaIds.length !== original.length
     ? c.checks.map((check) => check.id === "criteria" ? { ...check, passed: true, detail: undefined } : check)
     : c.checks;
-  return { ...c, testData: c.testData ?? [], steps: c.steps ?? [], criteriaIds, checks };
+  return {
+    ...c,
+    title,
+    // Rebuild old provenance details if they still contain the retired title.
+    trace: title === c.title ? c.trace : undefined,
+    testData: c.testData ?? [],
+    steps: c.steps ?? [],
+    criteriaIds,
+    checks,
+  };
 }
 
 /** Reads persisted state; storage can be missing or blocked, so failures fall back to empty. */
@@ -32,7 +43,7 @@ function load(): ReviewState {
     const parsed = JSON.parse(raw) as Partial<ReviewState>;
     return {
       requirements: parsed.requirements ?? sampleRequirements,
-      cases: (parsed.cases ?? []).map(normalizeCase),
+      cases: (parsed.cases ?? []).filter((c) => !isHiddenConditionFailureCase(c)).map(normalizeCase),
       changelog: parsed.changelog ?? [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings, model: AI_MODEL },
     };

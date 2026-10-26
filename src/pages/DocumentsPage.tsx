@@ -5,7 +5,7 @@ import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
 import { GeneratedCaseCard } from "../components/GeneratedCaseCard";
 import { AI_MODEL, EXTRACTION_TEMPERATURE } from "../config/ai";
-import { ACCEPTED_FILE_TYPES } from "../config/documents";
+import { ACCEPTED_FILE_TYPES, CASES_PER_PAGE } from "../config/documents";
 import { extractRequirements, sectionBatches } from "../ai/extract";
 import { versionLabel } from "../documents/ingest";
 import type { IngestProgress } from "../documents/ingest";
@@ -16,6 +16,7 @@ import { DOC_ROLES } from "../types/document";
 import type { DocKind, DocRole, SourceDocument } from "../types/document";
 import type { Req } from "../types/requirement";
 import { PRIORITIES } from "../types/review";
+import { isHiddenConditionFailureCase } from "../utils/caseText";
 
 const KIND_HINT: Record<DocKind, string> = {
   Fachlich: "Rechtliche/fachliche Vorgaben",
@@ -27,6 +28,12 @@ const ROLE_HINT: Record<DocRole, string> = {
   "Technische Informationen": "Technische Beschreibung – daraus werden ebenfalls Testfälle erzeugt",
 };
 const fmt = (n: number) => n.toLocaleString("de-DE");
+
+/** Filter value that shows the cases of every source section. */
+const ALL_SECTIONS = "__all__";
+
+/** Category for a case whose requirement names no source section. */
+const NO_SECTION = "Ohne Abschnittsangabe";
 
 function UploadArea() {
   const { addFiles } = useDocuments();
@@ -73,12 +80,42 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   const runGeneration = useGeneration();
   const docReqs = useMemo(() => store.requirements.filter((r) => r.origin?.documentId === doc.id), [store.requirements, doc.id]);
   const ids = useMemo(() => new Set(docReqs.map((r) => r.id)), [docReqs]);
-  const docCases = useMemo(() => store.cases.filter((c) => ids.has(c.requirementId)).sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || b.origin.generatedAt.localeCompare(a.origin.generatedAt)), [store.cases, ids]);
+  const docCases = useMemo(
+    () => store.cases
+      .filter((c) => ids.has(c.requirementId) && !isHiddenConditionFailureCase(c))
+      .sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || b.origin.generatedAt.localeCompare(a.origin.generatedAt)),
+    [store.cases, ids],
+  );
+  // Source section of every requirement of this document; the cases are grouped and filtered by it.
+  const sectionByReq = useMemo(() => new Map(docReqs.map((r) => [r.id, r.origin?.sectionLabel ?? NO_SECTION])), [docReqs]);
+  /** One entry per source section, in document order, with the number of cases it produced. */
+  const sourceSections = useMemo(() => {
+    const orderByReq = new Map(docReqs.map((r, i) => [r.id, i]));
+    const byLabel = new Map<string, { label: string; count: number; order: number }>();
+    for (const c of docCases) {
+      const label = sectionByReq.get(c.requirementId) ?? NO_SECTION;
+      const order = orderByReq.get(c.requirementId) ?? Number.MAX_SAFE_INTEGER;
+      const entry = byLabel.get(label);
+      if (entry) { entry.count += 1; entry.order = Math.min(entry.order, order); }
+      else byLabel.set(label, { label, count: 1, order });
+    }
+    return [...byLabel.values()].sort((a, b) => a.order - b.order);
+  }, [docCases, docReqs, sectionByReq]);
+
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [showReasoning, setShowReasoning] = useState(true);
+  const [sectionFilter, setSectionFilter] = useState(ALL_SECTIONS);
+  const [page, setPage] = useState(1);
+
+  // A filter naming a section that no longer exists falls back to all sections.
+  const activeFilter = sectionFilter === ALL_SECTIONS || sourceSections.some((s) => s.label === sectionFilter) ? sectionFilter : ALL_SECTIONS;
+  const visibleCases = activeFilter === ALL_SECTIONS ? docCases : docCases.filter((c) => (sectionByReq.get(c.requirementId) ?? NO_SECTION) === activeFilter);
+  const pageCount = Math.max(1, Math.ceil(visibleCases.length / CASES_PER_PAGE));
+  const currentPage = Math.min(page, pageCount);
+  const pageCases = visibleCases.slice((currentPage - 1) * CASES_PER_PAGE, currentPage * CASES_PER_PAGE);
 
   async function extractAll(): Promise<Req[]> {
     const extracted: Req[] = [];
@@ -133,8 +170,21 @@ function Workspace({ doc }: { doc: SourceDocument }) {
     </Panel>
     <Panel>
       <div className="paneltop"><h3>Generierte Testfälle · {docCases.length}</h3><label className="checkrow"><input type="checkbox" checked={showReasoning} onChange={(e) => setShowReasoning(e.target.checked)} /> Begründung anzeigen</label></div>
-      <p className="muted small">Jeder Fall enthält Modellbegründung und aufklappbare Quellenzitat, Ontologie, Wissensgraph und Regelmodell.</p>
-      {!docCases.length ? <p className="muted">Noch keine Testfälle. Starten Sie oben die Analyse.</p> : docCases.map((c) => <GeneratedCaseCard key={c.id} item={c} showReasoning={showReasoning} />)}
+      <p className="muted small">Die Fälle sind nach dem Abschnitt der Quelle gruppiert und eingeklappt – ein Klick auf den Kopf klappt einen Fall auf. Jeder Fall enthält Modellbegründung sowie Quellenzitat, Ontologie, Wissensgraph und Regelmodell.</p>
+      {!docCases.length ? <p className="muted">Noch keine Testfälle. Starten Sie oben die Analyse.</p> : <>
+        <div className="docmeta">
+          <label className="field inline">Abschnitt der Quelle<select value={activeFilter} onChange={(e) => { setSectionFilter(e.target.value); setPage(1); }}>
+            <option value={ALL_SECTIONS}>Alle Abschnitte · {docCases.length}</option>
+            {sourceSections.map((s) => <option key={s.label} value={s.label}>{s.label} · {s.count}</option>)}
+          </select></label>
+          <span className="muted small">{visibleCases.length} Testfall/Testfälle · Seite {currentPage}/{pageCount}</span>
+          <div className="actions">
+            <button disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>← Zurück</button>
+            <button disabled={currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}>Weiter →</button>
+          </div>
+        </div>
+        {pageCases.map((c) => <GeneratedCaseCard key={c.id} item={c} showReasoning={showReasoning} collapsible showStatuses={false} showTitle={false} />)}
+      </>}
     </Panel>
   </div>;
 }
@@ -144,7 +194,7 @@ export function DocumentsPage() {
   const { requirements, cases } = useReviewStore();
   const [activeId, setActiveId] = useState<string | null>(null);
   const active = documents.find((d) => d.id === activeId) ?? documents[documents.length - 1];
-  const caseCount = (doc: SourceDocument) => { const ids = new Set(requirements.filter((r) => r.origin?.documentId === doc.id).map((r) => r.id)); return cases.filter((c) => ids.has(c.requirementId)).length; };
+  const caseCount = (doc: SourceDocument) => { const ids = new Set(requirements.filter((r) => r.origin?.documentId === doc.id).map((r) => r.id)); return cases.filter((c) => ids.has(c.requirementId) && !isHiddenConditionFailureCase(c)).length; };
   return <>
     <Header title="Dokumente & Testfälle" subtitle="Spezifikation hochladen, alle Abschnitte automatisch analysieren und Testfälle mit Modellbegründung und Quellennachweis erhalten." />
     <div className="chips"><span>1 Hochladen</span><span>2 Testfälle erzeugen</span><span>3 Testfälle prüfen</span><span className="warm">Ergebnisse sind Vorschläge – Prüfer/in entscheidet</span></div>

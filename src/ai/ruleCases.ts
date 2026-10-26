@@ -115,11 +115,11 @@ function restrictionCases(req: Req, r: Restriction): Draft[] {
     ),
   );
 
-  const negatives: Draft[] = r.conditions.map((cond, i) => ({
+  const negatives: Draft[] = r.conditions.map((_cond, i) => ({
     ...base,
-    title: `Bedingung ${i + 1} nicht erfüllt: ${truncate(cond, TITLE_CONDITION_CHARS)}`,
+    title: ``,
     technique: "Negativtest",
-    given: `Bedingung ${i + 1} ist nicht erfüllt („${truncate(cond, 200)}“); alle übrigen Bedingungen sind erfüllt.`,
+    given: ``,
     when: "Der Vorgang wird ausgelöst.",
     then: "Nicht zulässig – der Vorgang darf nicht erfolgen.",
     testData: conditionRows(r.conditions, i),

@@ -10,6 +10,7 @@ import { ORIGIN_LABEL, PRIORITIES } from "../types/review";
 import type { GeneratedTestCase, ReviewDecision } from "../types/review";
 import { download } from "../utils/download";
 import { toCsv } from "../utils/format";
+import { isHiddenConditionFailureCase, sanitizeCaseTitle } from "../utils/caseText";
 
 const FILTERS = ["Alle", "Offen", "Akzeptiert", "Abgelehnt"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -20,7 +21,7 @@ function exportPlan(cases: GeneratedTestCase[], sourceOf: (id: string) => string
     c.id,
     c.requirementId,
     sourceOf(c.requirementId),
-    c.title,
+    sanitizeCaseTitle(c.title),
     c.technique,
     c.priority,
     ORIGIN_LABEL[c.origin.kind],
@@ -52,12 +53,13 @@ export function Tests() {
   const [filter, setFilter] = useState<Filter>("Alle");
   const [selected, setSelected] = useState<string | null>(null);
 
-  const visible = cases
+  const shownCases = cases.filter((c) => !isHiddenConditionFailureCase(c));
+  const visible = shownCases
     .filter((c) => filter === "Alle" || c.review.decision === (filter as ReviewDecision))
     .sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.id.localeCompare(b.id));
-  const active = cases.find((c) => c.id === selected) ?? visible[0];
+  const active = shownCases.find((c) => c.id === selected) ?? visible[0];
   const sourceOf = (id: string) => requirements.find((r) => r.id === id)?.source ?? "";
-  const exportable = cases.filter((c) => c.review.decision !== "Abgelehnt");
+  const exportable = cases.filter((c) => !isHiddenConditionFailureCase(c) && c.review.decision !== "Abgelehnt");
 
   return (
     <>
@@ -73,12 +75,12 @@ export function Tests() {
       <div className="filters">
         {FILTERS.map((f) => (
           <button key={f} className={filter === f ? "selected" : ""} onClick={() => setFilter(f)}>
-            {f} · {f === "Alle" ? cases.length : cases.filter((c) => c.review.decision === f).length}
+            {f} · {f === "Alle" ? shownCases.length : shownCases.filter((c) => c.review.decision === f).length}
           </button>
         ))}
       </div>
 
-      {cases.length === 0 ? (
+      {shownCases.length === 0 ? (
         <Panel>
           <p className="muted">
             Noch keine erzeugten Testfälle. Laden Sie unter <Link to="/documents">Dokumente & Extraktion</Link> eine Spezifikation hoch
@@ -100,7 +102,7 @@ export function Tests() {
                 {visible.map((c) => (
                   <tr key={c.id} onClick={() => setSelected(c.id)} className={active?.id === c.id ? "highlight" : ""}>
                     <td><code>{c.id}</code><br /><small className="muted">{c.requirementId}</small></td>
-                    <td>{c.title}</td>
+                    <td>{sanitizeCaseTitle(c.title)}</td>
                     <td>{c.technique}</td>
                     <td><PriorityBadge value={c.priority} /></td>
                     <td>
