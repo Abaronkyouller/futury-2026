@@ -125,7 +125,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
     <Panel>
       <div className="paneltop"><h3><span className="stepno">2</span> Testfälle aus der Spezifikation erzeugen</h3><small>Alle {doc.sections.length} Abschnitte</small></div>
       <p className="muted">Die App analysiert automatisch das gesamte Dokument. Anforderungen bleiben ein interner Verarbeitungsschritt; angezeigt werden die daraus erzeugten Testfälle.</p>
-      <div className="chips"><span>Alle Abschnitte</span><span>Quelle: {doc.name}</span>{doc.version && <span>{doc.version}</span>}{doc.stand && <span>Stand {doc.stand}</span>}</div>
+      <div className="chips"><span>Quelle: {doc.name}</span>{doc.version && <span>{doc.version}</span>}{doc.stand && <span>Stand {doc.stand}</span>}</div>
       <div className="actions"><button className="primary" disabled={busy || !doc.sections.length} onClick={runAnalysis}><Sparkles size={15} /> {busy ? "Analyse läuft …" : docCases.length ? "Weitere Testfälle erzeugen" : "Testfälle erzeugen"}</button></div>
       {phase && <p className="muted small">{phase}</p>}
       {error && <div className="notice errorbox"><b>Analyse fehlgeschlagen</b><p>{error}</p></div>}

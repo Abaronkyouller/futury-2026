@@ -8,6 +8,14 @@ function EvidenceBadge({ value }: { value: TraceEvidence }) {
 
 const RULE_CLASS: Record<string, string> = { belegt: "ok", abgeleitet: "derived", offen: "warn", widerspruch: "fail" };
 
+/** Longest value/detail text shown per graph edge; longer text is cut and stays readable via title. */
+const EDGE_TEXT_CHARS = 120;
+
+/** Shortens long graph text so a line stays scannable (full text on hover). */
+function shorten(text: string): string {
+  return text.length > EDGE_TEXT_CHARS ? `${text.slice(0, EDGE_TEXT_CHARS - 1).trimEnd()}…` : text;
+}
+
 /** Expandable local reasoning details: source, ontology, graph and rule trace. */
 export function CaseBackendDetails({ trace, checks }: { trace: CaseTrace; checks: CheckResult[] }) {
   const nodeById = new Map(trace.graph.nodes.map((n) => [n.id, n]));
@@ -33,7 +41,13 @@ export function CaseBackendDetails({ trace, checks }: { trace: CaseTrace; checks
       <ul className="kedges">{trace.graph.edges.map((edge) => {
         const from = nodeById.get(edge.from);
         const to = nodeById.get(edge.to);
-        return <li key={edge.id}><span className={`knode evidence-${edge.evidence}`}>{from?.kind ?? edge.from}</span><span className="krelation">{edge.relation}</span><span className={`knode evidence-${edge.evidence}`}>{to?.kind ?? edge.to}</span><small className="muted">{to?.label}</small></li>;
+        return <li key={edge.id}>
+          <span className={`knode evidence-${edge.evidence}`}>{from?.kind ?? edge.from}:</span>
+          <span className="krelation">{edge.relation}</span>
+          <span className={`knode evidence-${edge.evidence}`}>{to?.kind ?? edge.to}:</span>
+          <span title={to?.label}>{shorten(to?.label ?? "")}</span>
+          {to?.detail && <small className="muted" title={to.detail}>— {shorten(to.detail)}</small>}
+        </li>;
       })}</ul>
 
       <h5 className="minihead">4 REGELMODELL</h5>

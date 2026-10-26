@@ -5,6 +5,7 @@ import { ORIGIN_LABEL } from "../types/review";
 import { OPEN_VALUE_MARKER } from "../config/ai";
 import { useReviewStore } from "../state/reviewContext";
 import { buildCaseTrace } from "../reasoning/trace";
+import { expectedStatus } from "../reasoning/expectedStatus";
 import { CaseBackendDetails } from "./CaseBackendDetails";
 import { Status } from "./Status";
 import { formatDateTime } from "../utils/format";
@@ -58,6 +59,8 @@ export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTest
   const kind = item.origin.kind;
   const req = requirements.find((r) => r.id === item.requirementId);
   const trace = item.trace ?? (req ? buildCaseTrace(req, item, item.origin, item.id) : undefined);
+  // Computed from the case origin and the requirement's source, not a fixed label.
+  const expected = expectedStatus(item, req);
 
   return (
     <div className={`gencase ${ORIGIN_CLASS[kind]} ${item.review.decision === "Abgelehnt" ? "rejected" : ""}`}>
@@ -116,12 +119,9 @@ export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTest
         </>
       )}
 
-      <h5 className="minihead">ERWARTETES ERGEBNIS · VORSCHLAG, NICHT DURCH EINE REGEL-ENGINE BESTÄTIGT</h5>
-      {item.expectedFields.length === 0 ? (
-        <p className="muted small">Für diesen Fall ist kein erwartetes Ergebnis angegeben – vor der Ausführung ergänzen.</p>
-      ) : (
-        <FieldTable rows={item.expectedFields} />
-      )}
+      <h5 className="minihead">ERWARTETES ERGEBNIS · {expected.label}</h5>
+      <p className="muted small">{expected.detail}</p>
+      {expected.present && <FieldTable rows={item.expectedFields} />}
 
       {showReasoning && (
         <>

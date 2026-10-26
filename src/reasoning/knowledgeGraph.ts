@@ -35,7 +35,17 @@ export function buildKnowledgeGraph(req: Req, c: ReasoningCase, ontology: Ontolo
 
   c.expectedFields.forEach((field, index) => {
     const evidence: TraceEvidence = field.value.includes(OPEN_VALUE_MARKER) ? "open" : "derived";
-    const node: KnowledgeNode = { id: `${caseId}-expected-${index}`, kind: "Erwartet", label: `${field.field}: ${field.value}`, evidence, sourceRef: ref };
+    const node: KnowledgeNode = {
+      id: `${caseId}-expected-${index}`,
+      kind: "Erwartet",
+      label: `${field.field}: ${field.value}`,
+      evidence,
+      // Shown next to the value in the edge list: where the expected value comes from.
+      detail: evidence === "open"
+        ? "Ausdrücklich offen – der Prüfer legt den Wert fest"
+        : "Aus Regel und Testdaten abgeleitet, nicht durch eine Abrechnung bestätigt",
+      sourceRef: ref,
+    };
     nodes.push(node);
     edges.push({ id: `${caseId}-e-expected-${index}`, from: test.id, to: node.id, relation: "erwartet", evidence });
   });
