@@ -13,6 +13,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 ul.plain { margin: 0; padding-left: 18px; }
 select.full, .field select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); margin: 0 0 12px; }
 .brandmark { background: var(--accent); color: var(--on-primary); }
+.brandlogo { display: block; height: 32px; width: auto; }
 
 /* Link styled as a button (navigation actions). */
 .buttonlink { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--border); background: var(--surface); border-radius: 7px; padding: 11px 15px; color: var(--text); font-weight: 600; text-decoration: none; }

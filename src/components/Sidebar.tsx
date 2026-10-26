@@ -1,5 +1,6 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
+import logoUrl from "../assets/logo.png";
 import {
   LayoutDashboard,
   FileUp,
@@ -24,13 +25,12 @@ const LINKS = [
 export function Sidebar() {
   return (
     <aside className="sidebar">
-      <div className="brand">
+      <Link to="/" className="brand" aria-label="Zur Übersicht">
         <span className="brandmark">P</span>
         <div>
-          <strong>Prüfassistent</strong>
-          <small>Systemprüfung · DTA EEL</small>
+          <img className="brandlogo" src={logoUrl} alt="Prüfassistent" />
         </div>
-      </div>
+      </Link>
       <nav>
         {LINKS.map((link) => (
           <React.Fragment key={link.path}>

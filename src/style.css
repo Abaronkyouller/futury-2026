@@ -59,6 +59,7 @@ button.link {
   align-items:center;
   margin:0 7px 35px;
   color:var(--surface);
+  text-decoration:none;
 }
 .brandmark {
   background:var(--accent);
