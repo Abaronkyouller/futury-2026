@@ -15,6 +15,8 @@ export type ReviewState = {
   cases: GeneratedTestCase[];
   changelog: ChangeLogEntry[];
   settings: GenerationSettings;
+  /** Version marker for one-time migrations of persisted priority assignments. */
+  priorityAssignmentVersion: number;
 };
 
 /** Fields of a change-log entry a caller provides; id and timestamp are added by the store. */

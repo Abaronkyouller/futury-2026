@@ -53,6 +53,8 @@
   --warn-line: #f2dfb0;
   --bad: #b0102f;
   --bad-bg: #fde6ea;
+  --info: var(--itsg-blue);
+  --info-bg: #e5f1fb;
   --neutral: #485a6c;
   --neutral-bg: #e8edf2;
 

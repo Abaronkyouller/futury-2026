@@ -12,7 +12,7 @@ import { formatDateTime } from "../utils/format";
 import { sanitizeCaseTitle, visibleFields } from "../utils/caseText";
 
 /** CSS modifier per priority flag. */
-const PRIORITY_CLASS: Record<Priority, string> = { Hoch: "bad", Mittel: "warn", Niedrig: "neutral" };
+const PRIORITY_CLASS: Record<Priority, string> = { Hoch: "bad", Mittel: "warn", Niedrig: "info" };
 
 /** CSS modifier and explanation per reasoning basis. */
 const BASIS_INFO: Record<Basis, { cls: string; hint: string }> = {

@@ -396,6 +396,10 @@ main {
   background:var(--warn-bg);
   color:var(--warn);
 }
+.status.info {
+  background:var(--info-bg);
+  color:var(--info);
+}
 .status.neutral {
   background:var(--neutral-bg);
   color:var(--neutral);

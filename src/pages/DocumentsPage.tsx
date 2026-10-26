@@ -15,7 +15,7 @@ import { useGeneration } from "../state/useGeneration";
 import { DOC_ROLES } from "../types/document";
 import type { DocKind, DocRole, SourceDocument } from "../types/document";
 import type { Req } from "../types/requirement";
-import type { GeneratedTestCase } from "../types/review";
+import type { GeneratedTestCase, Priority } from "../types/review";
 import { PRIORITIES } from "../types/review";
 
 const KIND_HINT: Record<DocKind, string> = {
@@ -28,6 +28,10 @@ const ROLE_HINT: Record<DocRole, string> = {
   "Technische Informationen": "Technische Beschreibung – daraus werden ebenfalls Testfälle erzeugt",
 };
 const fmt = (n: number) => n.toLocaleString("de-DE");
+const REVIEW_FILTERS = ["Alle", "Offen", "Akzeptiert", "Abgelehnt"] as const;
+type ReviewFilter = (typeof REVIEW_FILTERS)[number];
+type PriorityFilter = "Alle" | Priority;
+type CaseSort = "Priorität" | "Offene zuerst";
 
 /**
  * Category for a case whose requirement names no source section. Cases are
@@ -153,15 +157,26 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [showReasoning, setShowReasoning] = useState(true);
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("Alle");
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("Alle");
+  const [caseSort, setCaseSort] = useState<CaseSort>("Priorität");
   /** Writable filter; only the first matching source section is visible. */
   const [sectionQuery, setSectionQuery] = useState("");
   const normalizedQuery = sectionQuery.trim().toLocaleLowerCase("de-DE");
   const activeSection = normalizedQuery
     ? sourceSections.find((s) => s.label.toLocaleLowerCase("de-DE").includes(normalizedQuery))?.label ?? ""
     : sourceSections[0]?.label ?? "";
-  const activeCases = docCases.filter(
-    (c) => (sectionByReq.get(c.requirementId) ?? NO_SECTION) === activeSection,
-  );
+  const filteredCases = docCases
+    .filter((c) => priorityFilter === "Alle" || c.priority === priorityFilter)
+    .filter((c) => reviewFilter === "Alle" || c.review.decision === reviewFilter)
+    .sort((a, b) => {
+      const priorityOrder = PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority);
+      if (caseSort === "Priorität") return priorityOrder || b.origin.generatedAt.localeCompare(a.origin.generatedAt);
+      const openOrder = Number(b.review.decision === "Offen") - Number(a.review.decision === "Offen");
+      return openOrder || priorityOrder || b.origin.generatedAt.localeCompare(a.origin.generatedAt);
+    });
+  const activeCases = filteredCases.filter((c) => (sectionByReq.get(c.requirementId) ?? NO_SECTION) === activeSection);
+  const hasFilters = Boolean(sectionQuery) || priorityFilter !== "Alle" || reviewFilter !== "Alle" || caseSort !== "Priorität";
 
   async function extractAll(): Promise<Req[]> {
     const extracted: Req[] = [];
@@ -223,13 +238,32 @@ function Workspace({ doc }: { doc: SourceDocument }) {
           <input list="source-sections" placeholder="Abschnitt der Quelle eingeben, z. B. „Inhalt der Leistung“" value={sectionQuery} onChange={(e) => setSectionQuery(e.target.value)} />
           <datalist id="source-sections">{sourceSections.map((s) => <option key={s.label} value={s.label}>{s.count} Testfall/Testfälle</option>)}</datalist>
         </div>
-        <div className="docmeta">
-          <span className="muted small">{sourceSections.length} Abschnitt(e) der Quelle · {docCases.length} Testfall/Testfälle</span>
-          {sectionQuery && <button onClick={() => setSectionQuery("")}>Filter zurücksetzen</button>}
+        <div className="filters">
+          <label className="field inline">Priorität
+            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as PriorityFilter)}>
+              <option>Alle</option>
+              {PRIORITIES.map((priority) => <option key={priority}>{priority}</option>)}
+            </select>
+          </label>
+          <label className="field inline">Prüfstatus
+            <select value={reviewFilter} onChange={(e) => setReviewFilter(e.target.value as ReviewFilter)}>
+              {REVIEW_FILTERS.map((status) => <option key={status}>{status}</option>)}
+            </select>
+          </label>
+          <label className="field inline">Sortierung
+            <select value={caseSort} onChange={(e) => setCaseSort(e.target.value as CaseSort)}>
+              <option>Priorität</option>
+              <option>Offene zuerst</option>
+            </select>
+          </label>
         </div>
-        {activeSection
+        <div className="docmeta">
+          <span className="muted small">{sourceSections.length} Abschnitt(e) der Quelle · {filteredCases.length} von {docCases.length} Testfall/Testfällen</span>
+          {hasFilters && <button onClick={() => { setSectionQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); setCaseSort("Priorität"); }}>Filter zurücksetzen</button>}
+        </div>
+        {activeSection && activeCases.length > 0
           ? <div className="casegroups"><SectionGroup key={activeSection} label={activeSection} cases={activeCases} showReasoning={showReasoning} /></div>
-          : <p className="muted">Kein Abschnitt der Quelle enthält „{sectionQuery}“.</p>}
+          : <p className="muted">Keine Testfälle entsprechen den gewählten Filtern{sectionQuery ? ` im Abschnitt „${sectionQuery}“` : ""}.</p>}
       </>}
     </Panel>
   </div>;

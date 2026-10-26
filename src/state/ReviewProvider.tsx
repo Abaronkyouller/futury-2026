@@ -7,12 +7,16 @@ import type { ChangeLogEntry, GeneratedTestCase, GenerationSettings } from "../t
 import { ReviewContext } from "./reviewContext";
 import type { LogInput, ReviewState, ReviewStore } from "./reviewContext";
 import { sanitizeCaseTitle } from "../utils/caseText";
+import { redistributePriorities } from "../utils/priority";
+
+const PRIORITY_ASSIGNMENT_VERSION = 1;
 
 const EMPTY: ReviewState = {
   requirements: sampleRequirements,
   cases: [],
   changelog: [],
   settings: DEFAULT_SETTINGS,
+  priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
 };
 
 /** Fills fields added in later versions so older persisted cases stay readable. */
@@ -41,11 +45,14 @@ function load(): ReviewState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<ReviewState>;
+    const normalizedCases = (parsed.cases ?? []).map(normalizeCase);
+    const resetPriorities = (parsed.priorityAssignmentVersion ?? 0) < PRIORITY_ASSIGNMENT_VERSION;
     return {
       requirements: parsed.requirements ?? sampleRequirements,
-      cases: (parsed.cases ?? []).map(normalizeCase),
+      cases: resetPriorities ? redistributePriorities(normalizedCases) : normalizedCases,
       changelog: parsed.changelog ?? [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings, model: AI_MODEL },
+      priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
     };
   } catch {
     return EMPTY;
