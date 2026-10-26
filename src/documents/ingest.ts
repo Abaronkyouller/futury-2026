@@ -60,8 +60,9 @@ export async function ingestFile(file: File, onProgress: (p: IngestProgress) => 
       throw new Error(`„${file.name}“ enthält keine Textebene (gescanntes PDF?). Texterkennung (OCR) ist nicht eingebaut.`);
     }
     if (empty > 0) warnings.push(`${empty} Seite(n) ohne Text (z. B. Grafiken oder Scans) – deren Inhalt fehlt.`);
-    const { pages, removed } = removeRepeatedLines(raw);
-    if (removed.length) warnings.push(`Kopf-/Fußzeilen entfernt: ${removed.map((r) => `„${r}“`).join(", ")}`);
+    // Running headers/footers are still removed, but the removed patterns are
+    // no longer reported to the examiner (the notice proved too noisy).
+    const { pages } = removeRepeatedLines(raw);
     headText = raw.slice(0, 3).flat().join("\n");
     onProgress({ stage: "Abschnitte werden erkannt" });
     sections = segmentPages(pages, id);

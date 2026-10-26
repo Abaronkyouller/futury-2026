@@ -34,7 +34,7 @@ const lineKey = (line: string) => line.replace(/\d+/g, "#").replace(/\s+/g, " ")
 /**
  * Removes running headers/footers: lines that appear (digit-insensitive) on at
  * least REPEATED_LINE_SHARE of the pages. Returns the cleaned pages and the
- * removed patterns so the examiner can see what was dropped.
+ * patterns that were removed.
  */
 export function removeRepeatedLines(pages: PageLines[]): { pages: PageLines[]; removed: string[] } {
   if (pages.length < 4) return { pages, removed: [] };

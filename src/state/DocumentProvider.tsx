@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { RETIRED_WARNING_PREFIXES } from "../config/documents";
 import { ingestFile, versionLabel } from "../documents/ingest";
 import { deleteDocument, loadDocuments, saveDocument } from "../documents/storage";
 import type { DocKind, DocRole, SourceDocument } from "../types/document";
@@ -9,6 +10,19 @@ import { useReviewStore } from "./reviewContext";
 
 const STORAGE_WARNING =
   "Dokumente können in diesem Browser nicht dauerhaft gespeichert werden (IndexedDB nicht verfügbar). Sie bleiben nur bis zum Neuladen erhalten.";
+
+/**
+ * Removes warnings that an earlier version stored on the document but that the
+ * current ingest pipeline no longer produces (e.g. the removed running
+ * headers/footers). Without this, already-uploaded documents would keep
+ * displaying retired notices from IndexedDB forever.
+ */
+function normalizeDocument(doc: SourceDocument): SourceDocument {
+  const warnings = (doc.warnings ?? []).filter(
+    (w) => !RETIRED_WARNING_PREFIXES.some((prefix) => w.startsWith(prefix)),
+  );
+  return warnings.length === (doc.warnings ?? []).length ? doc : { ...doc, warnings };
+}
 
 /**
  * Holds uploaded source documents. Text extraction runs locally in the
@@ -25,7 +39,9 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     loadDocuments()
       .then((docs) => {
-        if (!cancelled) setDocuments(docs.sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt)));
+        if (!cancelled) {
+          setDocuments(docs.map(normalizeDocument).sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt)));
+        }
       })
       .catch(() => !cancelled && setStorageWarning(STORAGE_WARNING))
       .finally(() => !cancelled && setReady(true));

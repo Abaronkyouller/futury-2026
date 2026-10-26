@@ -34,6 +34,13 @@ export const RANKED_SECTIONS_SHOWN = 25;
 /** Header/footer lines that appear on at least this share of PDF pages are removed. */
 export const REPEATED_LINE_SHARE = 0.4;
 
+/**
+ * Warning texts that earlier versions stored on a document but that are no
+ * longer produced. They are dropped when documents are loaded from IndexedDB,
+ * so old records do not keep showing a notice the app no longer generates.
+ */
+export const RETIRED_WARNING_PREFIXES = ["Kopf-/Fußzeilen entfernt:"];
+
 /** Example search terms offered in the section search. */
 export const FOCUS_SUGGESTIONS = [
   "Vorerkrankung DBVO Abgabegrund 41",
