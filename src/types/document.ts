@@ -9,8 +9,8 @@
 
 /**
  * Document kind (brainstorm bonus idea: distinguish government specifications
- * from technical documents). Determined by a transparent keyword heuristic and
- * always overridable by the examiner.
+ * from technical documents). Determined by a transparent keyword heuristic; the
+ * matched keywords are stored alongside it as evidence.
  * - Fachlich: legal/business rules (Gesetz, Rundschreiben, Grundsätze)
  * - Technisch: procedure or data-record description (Datenbaustein, Feld, Abgabegrund)
  * - Testkonstellation: example scenario or test constellation
@@ -19,12 +19,12 @@ export const DOC_KINDS = ["Fachlich", "Technisch", "Testkonstellation"] as const
 export type DocKind = (typeof DOC_KINDS)[number];
 
 /**
- * How a document is used by the generator.
- * - Spezifikation: requirements are extracted from it
- * - Formatbeispiel: only shown to the model as an example of structure and depth;
- *   its values are never treated as facts
+ * What kind of source the document is. Both roles are sources for test-case
+ * generation; the label only records what the document contains.
+ * - Spezifikation: fachliche Vorgaben (Gesetz, Rundschreiben, Grundsätze)
+ * - Technische Informationen: Verfahrens- oder Datensatzbeschreibung
  */
-export const DOC_ROLES = ["Spezifikation", "Formatbeispiel"] as const;
+export const DOC_ROLES = ["Spezifikation", "Technische Informationen"] as const;
 export type DocRole = (typeof DOC_ROLES)[number];
 
 export type DocFormat = "pdf" | "docx" | "text";
@@ -51,8 +51,6 @@ export type DocClassification = {
   scores: Record<DocKind, number>;
   /** Most frequent matched keywords, e.g. "Datenbaustein ×41". */
   evidence: string[];
-  /** True once the examiner changed the kind manually. */
-  overridden: boolean;
 };
 
 export type SourceDocument = {

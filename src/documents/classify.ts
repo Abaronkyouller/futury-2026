@@ -57,5 +57,5 @@ export function classifyDocument(text: string): DocClassification {
     .sort((a, b) => b.n - a.n)
     .slice(0, 5)
     .map((h) => (h.word === DATE_LABEL ? `${h.word} ×${h.n}` : `„${h.word}“ ×${h.n}`));
-  return { kind, scores, evidence, overridden: false };
+  return { kind, scores, evidence };
 }

@@ -6,12 +6,11 @@ import { Panel } from "../components/Panel";
 import { GeneratedCaseCard } from "../components/GeneratedCaseCard";
 import { SourceEvidence } from "../components/SourceEvidence";
 import { Status } from "../components/Status";
-import { AI_MODELS, FEEDBACK_EXAMPLES_MAX, MAX_CASES_LIMIT } from "../config/ai";
+import { FEEDBACK_EXAMPLES_MAX, MAX_CASES_LIMIT } from "../config/ai";
 import { PRIORITIES, PRIORITY_FOCUSES, TECHNIQUES } from "../types/review";
 import type { GenerationSettings, OriginKind, Technique } from "../types/review";
 import { buildMessages } from "../ai/prompt";
 import { useReviewStore } from "../state/reviewContext";
-import { useDocuments } from "../state/documentContext";
 import { useGeneration } from "../state/useGeneration";
 
 /**
@@ -22,7 +21,6 @@ import { useGeneration } from "../state/useGeneration";
  */
 export function Generator() {
   const store = useReviewStore();
-  const { generationContext } = useDocuments();
   const runGeneration = useGeneration();
   const [params, setParams] = useSearchParams();
   const requirements = store.requirements;
@@ -40,7 +38,7 @@ export function Generator() {
 
   const reviewed = store.cases.filter((c) => c.review.decision !== "Offen");
   // Exact prompt preview; cheap to rebuild on every render.
-  const messages = buildMessages(req, draft, reviewed, generationContext);
+  const messages = buildMessages(req, draft, reviewed);
 
   const reqCases = store.cases
     .filter((c) => c.requirementId === req.id)
@@ -77,7 +75,6 @@ export function Generator() {
       />
       <div className="chips">
         <span>Modell über hessian.ai-Gateway (Vite-Proxy)</span>
-        <span>{generationContext.formatExamples.length} Formatbeispiel(e) aus Dokumenten</span>
         <span>Rückmeldungen nur in diesem Browser gespeichert</span>
       </div>
       <div className="gengrid">
@@ -110,14 +107,6 @@ export function Generator() {
           )}
 
           <h3 className="spaced">Begründung & Generierung einstellen</h3>
-          <label className="field">
-            Modell
-            <select value={draft.model} onChange={(e) => set("model", e.target.value)}>
-              {AI_MODELS.map((m) => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
-            </select>
-          </label>
           <div className="field">
             Testtechniken
             <div className="checkrow">

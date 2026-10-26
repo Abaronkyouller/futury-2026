@@ -1,8 +1,7 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { Overview } from "./pages/Overview";
 import { DocumentsPage } from "./pages/DocumentsPage";
-import { Requirements } from "./pages/Requirements";
 import { Tests } from "./pages/Tests";
 import { Generator } from "./pages/Generator";
 import { Validation } from "./pages/Validation";
@@ -25,7 +24,7 @@ export function App() {
                 <Route path="/documents" element={<DocumentsPage />} />
                 {/* Former static "Specification library"; kept so old links still work. */}
                 <Route path="/library" element={<DocumentsPage />} />
-                <Route path="/requirements" element={<Requirements />} />
+                <Route path="/requirements" element={<Navigate to="/documents" replace />} />
                 <Route path="/generate" element={<Generator />} />
                 <Route path="/tests" element={<Tests />} />
                 <Route path="/validation" element={<Validation />} />

@@ -95,8 +95,8 @@ export async function ingestFile(file: File, onProgress: (p: IngestProgress) => 
     stand,
     sections,
     classification,
-    // Example constellations are shown to the model as structure reference by default.
-    role: classification.kind === "Testkonstellation" ? "Formatbeispiel" : "Spezifikation",
+    // Preselected from the keyword heuristic; the examiner can change it on the document card.
+    role: classification.kind === "Technisch" ? "Technische Informationen" : "Spezifikation",
     charCount: fullText.length,
     warnings,
   };

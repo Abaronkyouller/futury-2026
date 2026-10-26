@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { RETIRED_WARNING_PREFIXES } from "../config/documents";
 import { ingestFile, versionLabel } from "../documents/ingest";
 import { deleteDocument, loadDocuments, saveDocument } from "../documents/storage";
-import type { DocKind, DocRole, SourceDocument } from "../types/document";
+import { DOC_ROLES } from "../types/document";
+import type { DocRole, SourceDocument } from "../types/document";
 import { DocumentContext } from "./documentContext";
 import type { DocumentStore } from "./documentContext";
 import { useReviewStore } from "./reviewContext";
@@ -12,22 +13,27 @@ const STORAGE_WARNING =
   "Dokumente können in diesem Browser nicht dauerhaft gespeichert werden (IndexedDB nicht verfügbar). Sie bleiben nur bis zum Neuladen erhalten.";
 
 /**
- * Removes warnings that an earlier version stored on the document but that the
- * current ingest pipeline no longer produces (e.g. the removed running
- * headers/footers). Without this, already-uploaded documents would keep
- * displaying retired notices from IndexedDB forever.
+ * Brings a document loaded from IndexedDB onto the current model:
+ * - drops warnings an earlier version stored but the ingest pipeline no longer
+ *   produces (e.g. the removed running headers/footers), which would otherwise
+ *   keep showing retired notices forever;
+ * - maps the retired role "Formatbeispiel" (and any unknown value) onto the
+ *   current role set, so old records stay usable.
  */
 function normalizeDocument(doc: SourceDocument): SourceDocument {
   const warnings = (doc.warnings ?? []).filter(
     (w) => !RETIRED_WARNING_PREFIXES.some((prefix) => w.startsWith(prefix)),
   );
-  return warnings.length === (doc.warnings ?? []).length ? doc : { ...doc, warnings };
+  const role = (DOC_ROLES as readonly string[]).includes(doc.role) ? doc.role : "Spezifikation";
+  return warnings.length === (doc.warnings ?? []).length && role === doc.role
+    ? doc
+    : { ...doc, warnings, role };
 }
 
 /**
  * Holds uploaded source documents. Text extraction runs locally in the
- * browser; documents are persisted in IndexedDB. Uploads, deletions and
- * manual reclassifications are written to the change log.
+ * browser; documents are persisted in IndexedDB. Uploads, deletions and role
+ * changes are written to the change log.
  */
 export function DocumentProvider({ children }: { children: ReactNode }) {
   const { logEvent } = useReviewStore();
@@ -106,34 +112,14 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     [documents, logEvent, persist],
   );
 
-  const setKind = useCallback(
-    (id: string, kind: DocKind) =>
-      update(
-        id,
-        (d) => ({ ...d, classification: { ...d.classification, kind, overridden: true } }),
-        (d) => d.classification.kind,
-        "Dokumentart",
-      ),
-    [update],
-  );
-
   const setRole = useCallback(
     (id: string, role: DocRole) => update(id, (d) => ({ ...d, role }), (d) => d.role, "Rolle"),
     [update],
   );
 
-  const generationContext = useMemo(
-    () => ({
-      formatExamples: documents
-        .filter((d) => d.role === "Formatbeispiel")
-        .map((d) => ({ name: d.name, text: d.sections.map((s) => s.text).join("\n") })),
-    }),
-    [documents],
-  );
-
   const store = useMemo<DocumentStore>(
-    () => ({ documents, ready, storageWarning, addFiles, removeDocument, setKind, setRole, generationContext }),
-    [documents, ready, storageWarning, addFiles, removeDocument, setKind, setRole, generationContext],
+    () => ({ documents, ready, storageWarning, addFiles, removeDocument, setRole }),
+    [documents, ready, storageWarning, addFiles, removeDocument, setRole],
   );
 
   return <DocumentContext.Provider value={store}>{children}</DocumentContext.Provider>;

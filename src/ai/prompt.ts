@@ -1,19 +1,11 @@
 import type { Req } from "../types/requirement";
 import type { GeneratedTestCase, GenerationSettings } from "../types/review";
 import { FEEDBACK_EXAMPLES_MAX, OPEN_VALUE_MARKER } from "../config/ai";
-import { FORMAT_EXAMPLE_CHARS, GENERATION_CONTEXT_CHARS } from "../config/documents";
+import { GENERATION_CONTEXT_CHARS } from "../config/documents";
 import { truncate } from "../documents/text";
 
 /** OpenAI-compatible chat message. */
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
-
-/** An uploaded document marked as "Formatbeispiel": shown for structure only. */
-export type FormatExample = { name: string; text: string };
-
-/** Extra material for one generation run besides the requirement itself. */
-export type GenerationContext = { formatExamples: FormatExample[] };
-
-export const EMPTY_CONTEXT: GenerationContext = { formatExamples: [] };
 
 /**
  * JSON shape the model must return. Kept as a literal string so the exact
@@ -30,7 +22,7 @@ const RESPONSE_SCHEMA = `{
       "testData": [{ "field": "z. B. AU-Zeit 1", "value": "konkreter Testwert" }],
       "steps": [{ "actor": "Arbeitgeber | Krankenkasse", "action": "was gesendet oder geprüft wird", "abgabegrund": "zweistellig, nur wenn eine Meldung gesendet wird" }],
       "expectedFields": [{ "field": "Feldname im Datensatz", "value": "erwarteter Wert" }],
-      "criteriaIds": ["Kriterium-ID aus der Quelle, falls vorhanden"],
+      "criteriaIds": ["nur Kriterium-ID/UUID, die wörtlich im Quelltext steht; niemals ANF-…; sonst []"],
       "priority": "Hoch | Mittel | Niedrig",
       "priorityReason": "warum diese Priorität",
       "reasoning": [{ "text": "Begründungsschritt", "basis": "Quelle | Annahme | Generiert", "sourceRef": "nur bei basis=Quelle" }],
@@ -43,14 +35,13 @@ const RESPONSE_SCHEMA = `{
 const SYSTEM_PROMPT = `Du bist ein Assistent für die Systemprüfung von Entgeltabrechnungsprogrammen im Verfahren DTA EEL (Entgeltersatzleistungen). Du schlägst Testfälle mit erwarteten Ergebnissen vor, mit denen die Kommunikation zwischen Entgeltabrechnungsprogramm (Arbeitgeber) und Krankenkasse geprüft wird. Ein menschlicher Prüfer und eine Regel-Engine entscheiden später über die Korrektheit.
 
 Verbindliche Regeln:
-1. Erfinde keine Paragraphen, Abschnittsnummern, Versionen, Stichtage, Fristen, Abgabegründe oder Kriterium-IDs. Zitiere als Quelle nur die in der Anfrage genannten Dokumente, Abschnitte und IDs.
+1. Erfinde keine Paragraphen, Abschnittsnummern, Versionen, Stichtage, Fristen, Abgabegründe oder Kriterium-IDs. Zitiere als Quelle nur die in der Anfrage genannten Dokumente, Abschnitte und IDs. Übernimm ANF-IDs niemals in "criteriaIds".
 2. Kennzeichne jeden Begründungsschritt mit "basis": "Quelle" (steht so im Quelltext), "Annahme" (deine Annahme, muss geprüft werden) oder "Generiert" (abgeleitete Testidee).
 3. Wenn ein erwarteter Wert nicht eindeutig aus dem Quelltext folgt, schreibe als Wert genau "${OPEN_VALUE_MARKER}" und formuliere die Frage in "openQuestions".
 4. Testdaten (z. B. AU-Zeiträume) dürfen frei gewählt werden, müssen aber gültige Kalenderdaten im Format TT.MM.JJJJ sein und genau die zu prüfende Bedingung treffen.
 5. Beschreibe in "steps" die Nachrichtenfolge zwischen Arbeitgeber und Krankenkasse, wenn die Anforderung eine Meldung betrifft; sonst darf "steps" leer sein.
-6. Formatbeispiele zeigen nur Aufbau und Detailtiefe. Übernimm ihre Werte nicht als Fakten.
-7. Verwende deutsche Fachbegriffe und Feldnamen (z. B. Abgabegrund, Arbeitsunfähigkeit, Vorerkrankungszeiten).
-8. Antworte ausschließlich mit einem gültigen JSON-Objekt nach diesem Schema, ohne Markdown und ohne Text davor oder danach:
+6. Verwende deutsche Fachbegriffe und Feldnamen (z. B. Abgabegrund, Arbeitsunfähigkeit, Vorerkrankungszeiten).
+7. Antworte ausschließlich mit einem gültigen JSON-Objekt nach diesem Schema, ohne Markdown und ohne Text davor oder danach:
 ${RESPONSE_SCHEMA}`;
 
 /** Instruction text for each priority focus option. */
@@ -122,27 +113,16 @@ function sampleBlock(req: Req): string[] {
   ];
 }
 
-function formatBlock(context: GenerationContext): string[] {
-  if (context.formatExamples.length === 0) return [];
-  return [
-    "",
-    "Formatbeispiele (nur Aufbau und Detailtiefe, Werte NICHT übernehmen):",
-    ...context.formatExamples.map((f) => `--- ${f.name} ---\n${truncate(f.text, FORMAT_EXAMPLE_CHARS)}`),
-  ];
-}
-
 /** Builds the full message list for one generation run. */
 export function buildMessages(
   req: Req,
   settings: GenerationSettings,
   reviewed: GeneratedTestCase[],
-  context: GenerationContext = EMPTY_CONTEXT,
 ): ChatMessage[] {
   const steps = settings.reasoningDetail === "kurz" ? "1 bis 3" : "3 bis 6";
   const feedback = settings.useFeedback ? buildFeedbackBlock(reviewed) : "";
   const user = [
     ...(req.origin ? sourceBlock(req) : sampleBlock(req)),
-    ...formatBlock(context),
     "",
     `Erzeuge höchstens ${settings.maxCases} Testfälle.`,
     `Erlaubte Techniken: ${settings.techniques.join(", ")}.`,

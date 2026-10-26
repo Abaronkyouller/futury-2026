@@ -8,10 +8,10 @@ import { chatCompletion } from "./client";
 import { offlineDemoReply } from "./offlineDemo";
 import { parseCases } from "./parse";
 import type { RawCase } from "./parse";
-import { buildMessages, EMPTY_CONTEXT } from "./prompt";
-import type { GenerationContext } from "./prompt";
+import { buildMessages } from "./prompt";
 import { deriveRuleCases } from "./ruleCases";
-import { runChecks } from "./validate";
+import { isRequirementId, runChecks } from "./validate";
+import { buildCaseTrace } from "../reasoning/trace";
 
 export type GenerationRun = {
   runId: string;
@@ -32,7 +32,6 @@ async function produce(
   settings: GenerationSettings,
   reviewed: GeneratedTestCase[],
   kind: OriginKind,
-  context: GenerationContext,
 ): Promise<{ raw: RawCase[]; rawReply: string }> {
   if (kind === "regelbasiert") {
     const raw = deriveRuleCases(req, settings);
@@ -47,7 +46,7 @@ async function produce(
   }
   const rawReply =
     kind === "model"
-      ? await chatCompletion(settings.model, buildMessages(req, settings, reviewed, context), settings.temperature)
+      ? await chatCompletion(settings.model, buildMessages(req, settings, reviewed), settings.temperature)
       : offlineDemoReply(req);
   return { raw: parseCases(rawReply).slice(0, settings.maxCases), rawReply };
 }
@@ -61,27 +60,28 @@ export async function generateTestCases(
   settings: GenerationSettings,
   reviewed: GeneratedTestCase[],
   kind: OriginKind,
-  context: GenerationContext = EMPTY_CONTEXT,
 ): Promise<GenerationRun> {
-  const { raw, rawReply } = await produce(req, settings, reviewed, kind, context);
+  const { raw, rawReply } = await produce(req, settings, reviewed, kind);
 
   const now = new Date();
   const runId = newRunId(now);
   const reqNo = req.id.split("-").pop();
   const model = kind === "model" ? settings.model : kind;
 
-  const cases: GeneratedTestCase[] = raw.map((c, i) => ({
-    ...c,
-    // e.g. AI-028-172233481-1 (time part of the run id + position in the run)
-    id: `${kind === "regelbasiert" ? "RB" : "AI"}-${reqNo}-${runId.slice(10).replace("-", "")}-${i + 1}`,
-    requirementId: req.id,
-    // Unknown priority falls back to "Hoch" so a malformed case is looked at first;
-    // the failed priority check stays visible.
-    priority: c.priority ?? "Hoch",
-    checks: runChecks(c, req, settings, context),
-    origin: { kind, model, runId, generatedAt: now.toISOString() },
-    review: { decision: "Offen", comment: "" },
-    execution: "Nicht ausgeführt",
-  }));
+  const cases: GeneratedTestCase[] = raw.map((c, i) => {
+    const id = `${kind === "regelbasiert" ? "RB" : "AI"}-${reqNo}-${runId.slice(10).replace("-", "")}-${i + 1}`;
+    const clean = { ...c, criteriaIds: c.criteriaIds.filter((criterion) => !isRequirementId(criterion, req)) };
+    return {
+      ...clean,
+      id,
+      requirementId: req.id,
+      priority: clean.priority ?? "Hoch",
+      checks: runChecks(clean, req, settings),
+      trace: buildCaseTrace(req, clean, { kind, model }, id),
+      origin: { kind, model, runId, generatedAt: now.toISOString() },
+      review: { decision: "Offen", comment: "" },
+      execution: "Nicht ausgeführt",
+    };
+  });
   return { runId, cases, rawReply };
 }

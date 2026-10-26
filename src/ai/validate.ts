@@ -1,7 +1,6 @@
 import type { Req } from "../types/requirement";
 import type { CheckResult, GenerationSettings } from "../types/review";
 import type { RawCase } from "./parse";
-import type { GenerationContext } from "./prompt";
 import { OPEN_VALUE_MARKER } from "../config/ai";
 import { normalizeForMatch } from "../documents/text";
 
@@ -58,6 +57,11 @@ function sourceText(req: Req): string {
   return normalizeForMatch(parts.join("\n"));
 }
 
+/** App-generated ANF-* ids identify requirements, not source criteria. */
+export function isRequirementId(id: string, req: Req): boolean {
+  return id.toLowerCase() === req.id.toLowerCase() || /^ANF-/i.test(id);
+}
+
 /**
  * True if a two-digit Abgabegrund occurs as a standalone number. Digits and
  * dots around it are excluded so date parts ("31.03.2026") never count.
@@ -70,11 +74,9 @@ export function runChecks(
   c: RawCase,
   req: Req,
   settings: GenerationSettings,
-  context: GenerationContext,
 ): CheckResult[] {
   const allowed = allowedRefs(req);
   const known = sourceText(req);
-  const formats = normalizeForMatch(context.formatExamples.map((f) => f.text).join("\n"));
   const sourceSteps = c.reasoning.filter((s) => s.basis === "Quelle");
   const unmatchedRefs = [...c.sourceRefs, ...sourceSteps.map((s) => s.sourceRef ?? "")].filter(
     // References the source text itself makes (e.g. "3.12" cited in an example document) are accepted too.
@@ -92,7 +94,9 @@ export function runChecks(
 
   const codes = [...new Set(c.steps.map((s) => s.abgabegrund).filter((g): g is string => Boolean(g)))];
   const unknownCodes = codes.filter((g) => !codeInText(g, known));
-  const unknownCriteria = c.criteriaIds.filter((id) => !known.includes(id.toLowerCase()));
+  const unknownCriteria = c.criteriaIds
+    .filter((id) => !isRequirementId(id, req))
+    .filter((id) => !known.includes(id.toLowerCase()));
 
   return [
     {
@@ -137,9 +141,7 @@ export function runChecks(
       detail: codes.length === 0
         ? "keine Abgabegründe angegeben"
         : unknownCodes.length
-          ? `Nicht im Quelltext: ${unknownCodes
-              .map((g) => (codeInText(g, formats) ? `${g} (nur im Formatbeispiel)` : g))
-              .join(", ")}`
+          ? `Nicht im Quelltext: ${unknownCodes.join(", ")}`
           : `Belegt: ${codes.join(", ")}`,
     },
     {

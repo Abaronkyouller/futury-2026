@@ -86,6 +86,24 @@ export function sectionsWithinBudget(sections: DocSection[], budget = EXTRACTION
   return out;
 }
 
+/** Splits all sections into prompt-sized batches without dropping any section. */
+export function sectionBatches(sections: DocSection[], budget = EXTRACTION_CHAR_BUDGET): DocSection[][] {
+  const batches: DocSection[][] = [];
+  let batch: DocSection[] = [];
+  let used = 0;
+  for (const section of sections) {
+    if (batch.length && used + section.text.length > budget) {
+      batches.push(batch);
+      batch = [];
+      used = 0;
+    }
+    batch.push(section);
+    used += section.text.length;
+  }
+  if (batch.length) batches.push(batch);
+  return batches;
+}
+
 /** Examiner decisions on earlier extractions from the same document (in-context feedback). */
 function feedbackBlock(existing: Req[]): string {
   const reviewed = existing.filter((r) => r.status !== "Offen" || r.comment);

@@ -4,6 +4,8 @@ import type { Basis, GeneratedTestCase, OriginKind, Priority } from "../types/re
 import { ORIGIN_LABEL } from "../types/review";
 import { OPEN_VALUE_MARKER } from "../config/ai";
 import { useReviewStore } from "../state/reviewContext";
+import { buildCaseTrace } from "../reasoning/trace";
+import { CaseBackendDetails } from "./CaseBackendDetails";
 import { Status } from "./Status";
 import { formatDateTime } from "../utils/format";
 
@@ -50,10 +52,12 @@ function FieldTable({ rows }: { rows: { field: string; value: string }[] }) {
  * and examiner feedback controls.
  */
 export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTestCase; showReasoning: boolean }) {
-  const { reviewCase } = useReviewStore();
+  const { reviewCase, requirements } = useReviewStore();
   const [comment, setComment] = useState(item.review.comment);
   const failed = item.checks.filter((c) => !c.passed);
   const kind = item.origin.kind;
+  const req = requirements.find((r) => r.id === item.requirementId);
+  const trace = item.trace ?? (req ? buildCaseTrace(req, item, item.origin, item.id) : undefined);
 
   return (
     <div className={`gencase ${ORIGIN_CLASS[kind]} ${item.review.decision === "Abgelehnt" ? "rejected" : ""}`}>
@@ -70,7 +74,6 @@ export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTest
       <div className="tags">
         <span className={ORIGIN_CLASS[kind]}>
           {ORIGIN_LABEL[kind]}
-          {kind === "model" ? ` · ${item.origin.model}` : ""}
         </span>
         <span>{item.technique || "Technik fehlt"}</span>
         <span>{item.execution}</span>
@@ -79,6 +82,7 @@ export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTest
           <span key={id} title="Abgedeckte Kriterium-ID">Kriterium {id}</span>
         ))}
       </div>
+      {req && <div className="case-source"><span><b>Anforderung:</b> {req.id} · {req.title}</span>{trace && <><span><b>Quelle:</b> {trace.source.documentName} · {trace.source.sectionLabel}</span><span className={trace.source.quoteVerified ? "status good" : "status warn"}>{trace.source.quoteVerified ? "Zitat geprüft" : "Zitat ungeprüft"}</span></>}</div>}
       {item.priorityReason && <p className="muted small">Begründung der Priorität: {item.priorityReason}</p>}
 
       <div className="given">
@@ -143,21 +147,7 @@ export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTest
         </div>
       )}
 
-      <details className="checks">
-        <summary>
-          Regelbasierte Strukturprüfung: {item.checks.length - failed.length}/{item.checks.length} bestanden
-          {failed.length > 0 && <span className="checkfail"> · {failed.length} Auffälligkeit(en)</span>}
-        </summary>
-        <ul>
-          {item.checks.map((c) => (
-            <li key={c.id} className={c.passed ? "ok" : "fail"}>
-              {c.passed ? "✓" : "✕"} {c.label}
-              {c.detail && <small className="muted"> — {c.detail}</small>}
-            </li>
-          ))}
-        </ul>
-        <p className="muted small">Diese Prüfungen betreffen nur Struktur und Nachverfolgbarkeit, nicht die fachliche Korrektheit der Entgeltabrechnung.</p>
-      </details>
+      {trace ? <CaseBackendDetails trace={trace} checks={item.checks} /> : <details className="checks"><summary>Regelbasierte Strukturprüfung: {item.checks.length - failed.length}/{item.checks.length} bestanden</summary></details>}
 
       <textarea
         value={comment}

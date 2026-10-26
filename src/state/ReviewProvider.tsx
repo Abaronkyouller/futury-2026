@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { DEFAULT_SETTINGS, STORAGE_KEY } from "../config/ai";
+import { AI_MODEL, DEFAULT_SETTINGS, STORAGE_KEY } from "../config/ai";
 import { initial as sampleRequirements } from "../data/requirements";
 import type { Req } from "../types/requirement";
 import type { ChangeLogEntry, GeneratedTestCase, GenerationSettings } from "../types/review";
@@ -16,7 +16,12 @@ const EMPTY: ReviewState = {
 
 /** Fills fields added in later versions so older persisted cases stay readable. */
 function normalizeCase(c: GeneratedTestCase): GeneratedTestCase {
-  return { ...c, testData: c.testData ?? [], steps: c.steps ?? [], criteriaIds: c.criteriaIds ?? [] };
+  const original = c.criteriaIds ?? [];
+  const criteriaIds = original.filter((id) => !/^ANF-/i.test(id));
+  const checks = criteriaIds.length === 0 && criteriaIds.length !== original.length
+    ? c.checks.map((check) => check.id === "criteria" ? { ...check, passed: true, detail: undefined } : check)
+    : c.checks;
+  return { ...c, testData: c.testData ?? [], steps: c.steps ?? [], criteriaIds, checks };
 }
 
 /** Reads persisted state; storage can be missing or blocked, so failures fall back to empty. */
@@ -29,7 +34,7 @@ function load(): ReviewState {
       requirements: parsed.requirements ?? sampleRequirements,
       cases: (parsed.cases ?? []).map(normalizeCase),
       changelog: parsed.changelog ?? [],
-      settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
+      settings: { ...DEFAULT_SETTINGS, ...parsed.settings, model: AI_MODEL },
     };
   } catch {
     return EMPTY;

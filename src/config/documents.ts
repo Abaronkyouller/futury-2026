@@ -19,9 +19,6 @@ export const EXTRACTION_CHAR_BUDGET = 12000;
 /** Characters of section text added as context when generating test cases for one requirement. */
 export const GENERATION_CONTEXT_CHARS = 4000;
 
-/** Characters of a "Formatbeispiel" document shown to the model as structure reference. */
-export const FORMAT_EXAMPLE_CHARS = 3000;
-
 /** Upper bound for requirements per extraction run. */
 export const MAX_REQUIREMENTS_PER_RUN = 8;
 

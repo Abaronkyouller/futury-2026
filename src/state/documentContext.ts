@@ -1,7 +1,6 @@
 import { createContext, useContext } from "react";
-import type { GenerationContext } from "../ai/prompt";
 import type { IngestProgress } from "../documents/ingest";
-import type { DocKind, DocRole, SourceDocument } from "../types/document";
+import type { DocRole, SourceDocument } from "../types/document";
 
 export type DocumentStore = {
   documents: SourceDocument[];
@@ -12,11 +11,8 @@ export type DocumentStore = {
   /** Reads, segments and stores files. Returns error messages for files that failed. */
   addFiles: (files: File[], onProgress: (name: string, p: IngestProgress) => void) => Promise<{ added: SourceDocument[]; errors: string[] }>;
   removeDocument: (id: string) => void;
-  /** Examiner override of the keyword classification. */
-  setKind: (id: string, kind: DocKind) => void;
+  /** Sets the role of a document (Spezifikation / Technische Informationen). */
   setRole: (id: string, role: DocRole) => void;
-  /** Documents marked "Formatbeispiel", prepared for the generation prompt. */
-  generationContext: GenerationContext;
 };
 
 export const DocumentContext = createContext<DocumentStore | null>(null);

@@ -5,6 +5,9 @@ import type { ProxyOptions } from "vite";
 /** Default hessian.ai inference gateway (OpenAI-compatible). Override with HAI_API_BASE. */
 const DEFAULT_AI_GATEWAY = "https://hip-gw.hessian.ai";
 
+/** Fallback if HAI_MODEL is not set. Can be overridden in .env.local. */
+const DEFAULT_AI_MODEL = "vllm/Kolibri-1";
+
 /** Path the frontend calls; must match AI_PROXY_PATH in src/config/ai.ts. */
 const AI_PROXY_PATH = "/api/llm";
 
@@ -14,6 +17,7 @@ export default defineConfig(({ command, mode }) => {
   // browser bundle (Vite only exposes VITE_*), so the API key stays server-side.
   const env = loadEnv(mode, process.cwd(), "HAI_");
   const apiKey = env.HAI_API_KEY;
+  const model = env.HAI_MODEL?.trim() || DEFAULT_AI_MODEL;
   if (!apiKey && command === "serve") {
     console.warn(
       "[ai-proxy] HAI_API_KEY is not set. Copy .env.example to .env.local and add the team key; AI calls will fail with 401 until then.",
@@ -32,6 +36,8 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [react()],
+    // The model name is not secret; HAI_API_KEY stays in the proxy only.
+    define: { __HAI_MODEL__: JSON.stringify(model) },
     server: { proxy },
     preview: { proxy },
   };

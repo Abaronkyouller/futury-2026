@@ -3,11 +3,10 @@ import type { GenerationSettings } from "../types/review";
 /** Frontend path proxied by Vite to the gateway (see vite.config.ts). */
 export const AI_PROXY_PATH = "/api/llm";
 
-/** Models listed in the hessian.ai Team 7 handout (ai1.jpg / ai2.jpg). */
-export const AI_MODELS = [
-  { id: "vllm/Kolibri-1", label: "Kolibri-1 · Aleph Alpha · text, DE/EN" },
-  { id: "vllm/GLM-Flash:Latest", label: "GLM-5.3-Flash · Z.ai · text + vision" },
-] as const;
+/** The one model configured with HAI_MODEL in .env.local. */
+const FALLBACK_AI_MODEL = "vllm/Kolibri-1";
+export const AI_MODEL =
+  typeof __HAI_MODEL__ === "string" && __HAI_MODEL__.trim() ? __HAI_MODEL__.trim() : FALLBACK_AI_MODEL;
 
 /** Abort a model call after this long; long German outputs can take a while. */
 export const AI_REQUEST_TIMEOUT_MS = 120_000;
@@ -28,11 +27,11 @@ export const OPEN_VALUE_MARKER = "[offen – Regel nicht bestätigt]";
 export const STORAGE_KEY = "futury-review-store-v1";
 
 export const DEFAULT_SETTINGS: GenerationSettings = {
-  model: AI_MODELS[0].id,
+  model: AI_MODEL,
   temperature: 0.2,
   maxCases: 4,
   techniques: ["Grenzwert", "Äquivalenzklasse", "Negativtest"],
-  reasoningDetail: "kurz",
+  reasoningDetail: "ausführlich",
   priorityFocus: "Ausgewogen",
   useFeedback: true,
 };

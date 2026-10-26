@@ -3,7 +3,6 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   FileUp,
-  FileText,
   FlaskConical,
   Sparkles,
   CheckCircle2,
@@ -14,8 +13,7 @@ import {
 /** Navigation entries; `section` starts a labelled group. Keep in sync with routes in App.tsx. */
 const LINKS = [
   { path: "/", label: "Übersicht", Icon: LayoutDashboard },
-  { path: "/documents", label: "Dokumente & Extraktion", Icon: FileUp, section: "ABLAUF" },
-  { path: "/requirements", label: "Anforderungen", Icon: FileText },
+  { path: "/documents", label: "Dokumente & Testfälle", Icon: FileUp, section: "ABLAUF" },
   { path: "/generate", label: "Testfall-Generator", Icon: Sparkles },
   { path: "/tests", label: "Testfälle", Icon: FlaskConical },
   { path: "/validation", label: "Validierung & Bericht", Icon: CheckCircle2 },

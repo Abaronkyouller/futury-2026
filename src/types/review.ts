@@ -1,3 +1,5 @@
+import type { CaseTrace } from "./reasoning";
+
 /**
  * Shared types for AI-generated test cases, examiner feedback and the change log.
  *
@@ -107,6 +109,8 @@ export type GeneratedTestCase = {
   sourceRefs: string[];
   openQuestions: string[];
   checks: CheckResult[];
+  /** Deterministic source/ontology/graph/rule provenance details. */
+  trace?: CaseTrace;
   origin: GenerationOrigin;
   review: { decision: ReviewDecision; comment: string; reviewedAt?: string };
   execution: ExecutionState;

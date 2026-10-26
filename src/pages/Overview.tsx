@@ -18,8 +18,6 @@ export function Overview() {
   const { requirements, cases } = useReviewStore();
 
   const docReqs = requirements.filter((r) => r.origin);
-  const openReqs = requirements.filter((r) => r.status === "Offen");
-  const approved = requirements.filter((r) => r.status === "Genehmigt");
   const unverified = docReqs.filter((r) => !r.origin!.quoteVerified);
   const accepted = cases.filter((c) => c.review.decision === "Akzeptiert");
   const openCases = cases.filter((c) => c.review.decision === "Offen");
@@ -35,23 +33,10 @@ export function Overview() {
       path: "/documents",
     },
     {
-      name: "Anforderungen extrahieren",
-      desc: `${docReqs.length} aus Dokumenten, ${requirements.length - docReqs.length} Beispieldaten`,
-      status: docReqs.length ? "Erledigt" : "Offen",
-      path: "/documents",
-    },
-    {
-      name: "Anforderungen prüfen",
-      desc: `${approved.length} genehmigt, ${openReqs.length} offen`,
-      status: openReqs.length ? "Prüfung nötig" : "Erledigt",
-      path: "/requirements",
-      warn: openReqs.length > 0,
-    },
-    {
       name: "Testfälle erzeugen",
       desc: `${cases.length} erzeugt, ${accepted.length} akzeptiert, ${openCases.length} offen`,
       status: openCases.length ? "Prüfung nötig" : cases.length ? "Erledigt" : "Offen",
-      path: "/tests",
+      path: "/documents",
       warn: openCases.length > 0,
     },
     {
@@ -72,11 +57,8 @@ export function Overview() {
     ...(documents.length === 0
       ? [{ title: "Noch keine Spezifikation hochgeladen", desc: "Laden Sie z. B. die Verfahrensbeschreibung DTA EEL hoch, um Anforderungen mit Quellennachweis zu extrahieren.", action: "Hochladen", path: "/documents" }]
       : []),
-    ...(openReqs.length
-      ? [{ title: `${openReqs.length} Anforderung(en) warten auf Prüfung`, desc: "Zitat und Auslegung prüfen, dann genehmigen oder ablehnen.", action: "Prüfen", path: "/requirements" }]
-      : []),
     ...(unverified.length
-      ? [{ title: `${unverified.length} Zitat(e) nicht wörtlich gefunden`, desc: "Die KI hat Text zitiert, der im Abschnitt so nicht vorkommt. Am Original prüfen.", action: "Ansehen", path: `/requirements?req=${unverified[0].id}`, danger: true }]
+      ? [{ title: `${unverified.length} Zitat(e) nicht wörtlich gefunden`, desc: "Die KI hat Text zitiert, der im Abschnitt so nicht vorkommt. Am Original prüfen.", action: "Ansehen", path: "/documents", danger: true }]
       : []),
     ...(failedChecks.length
       ? [{ title: `${failedChecks.length} Testfall/Testfälle mit Auffälligkeiten`, desc: "Die regelbasierte Strukturprüfung hat z. B. unbelegte Abgabegründe oder ungültige Daten gefunden.", action: "Ansehen", path: "/tests", danger: true }]
@@ -129,8 +111,8 @@ export function Overview() {
       </Panel>
       <div className="metrics">
         {[
-          ["Dokumente", documents.length, `${documents.filter((d) => d.role === "Formatbeispiel").length} als Formatbeispiel`],
-          ["Anforderungen", requirements.length, `${approved.length} genehmigt · ${docReqs.length} mit Quellenzitat`],
+          ["Dokumente", documents.length, `${documents.filter((d) => d.role === "Technische Informationen").length} mit technischen Informationen`],
+          ["Quellenzitate", docReqs.length, `${unverified.length} nicht wörtlich geprüft`],
           ["Testfälle erzeugt", cases.length, `${cases.filter((c) => c.origin.kind === "model").length} KI · ${cases.filter((c) => c.origin.kind === "regelbasiert").length} regelbasiert`],
           ["Prüfung offen", openCases.length, `${accepted.length} akzeptiert`],
         ].map(([label, n, desc]) => (
