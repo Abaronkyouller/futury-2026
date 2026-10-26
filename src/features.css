@@ -12,14 +12,14 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .prewrap { white-space: pre-wrap; }
 ul.plain { margin: 0; padding-left: 18px; }
 select.full, .field select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); margin: 0 0 12px; }
-.brandmark { background: var(--accent); color: var(--on-primary); }
+.brandmark { background: var(--accent); color: var(--on-accent); }
 .brandlogo { display: block; height: 32px; width: auto; }
 
 /* Link styled as a button (navigation actions). */
 .buttonlink { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--border); background: var(--surface); border-radius: 7px; padding: 11px 15px; color: var(--text); font-weight: 600; text-decoration: none; }
 .buttonlink.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 .buttonlink:hover { filter: brightness(.96); }
-a.link { color: var(--primary); }
+a.link { color: var(--primary-ink); }
 button.primary:hover:not(:disabled) { background: var(--primary-hover); filter: none; }
 :focus-visible { outline: 3px solid var(--itsg-sky); outline-offset: 2px; }
 
@@ -64,7 +64,7 @@ button.primary:hover:not(:disabled) { background: var(--primary-hover); filter: 
 .batch li { padding: 6px 0; border-bottom: 1px solid var(--border-soft); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .batch-fertig { color: var(--good); }
 .batch-Fehler { color: var(--bad); }
-.batch-läuft { color: var(--primary); }
+.batch-läuft { color: var(--primary-ink); }
 
 /* Source evidence (quote next to interpretation) */
 .evidence .tags { margin-top: 0; }
@@ -86,13 +86,13 @@ button.primary:hover:not(:disabled) { background: var(--primary-hover); filter: 
 .errorbox p, .errorbox li { word-break: break-word; }
 pre.wrap { white-space: pre-wrap; word-break: break-word; font-size: 11px; max-height: 320px; overflow: auto; }
 .checks { margin-top: 12px; font-size: 12px; }
-.checks summary { cursor: pointer; color: var(--primary); font-weight: 600; }
+.checks summary { cursor: pointer; color: var(--primary-ink); font-weight: 600; }
 .checks ul { list-style: none; padding-left: 4px; }
 .checks li.ok { color: var(--good); }
 .checks li.fail { color: var(--bad); }
 .checkfail { color: var(--bad); }
 .backend { margin-top: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); padding: 10px 12px; font-size: 12px; }
-.backend summary { cursor: pointer; color: var(--primary); font-weight: 700; }
+.backend summary { cursor: pointer; color: var(--primary-ink); font-weight: 700; }
 .backend .detail { background: var(--surface); }
 .backend .detail th, .backend .detail td { font-size: 11px; vertical-align: top; }
 .backendchecks { list-style: none; padding-left: 4px; }
@@ -124,14 +124,14 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-size: 11px; max-h
 /* Collapsible case in the "Dokumente & Testfälle" workspace: header toggles the body. */
 .gencase.collapsed { padding: 12px 18px; }
 .gencase .paneltop.clickable { cursor: pointer; }
-.gencase .paneltop.clickable:hover .gentitle { color: var(--primary); }
+.gencase .paneltop.clickable:hover .gentitle { color: var(--primary-ink); }
 .gencase .casemark { color: var(--muted); font-size: 11px; }
 .gencase .given { margin: 14px 0; }
 /* Source-section categories in the workspace: heading, collapsed cases, own pagination. */
 .casegroups { display: grid; gap: 14px; margin-top: 12px; }
 .casegroup { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px 14px; background: var(--surface-2); }
 .casegroup .gencase { background: var(--surface); }
-.casehistory { margin: -6px 8px 18px; padding: 12px 16px; border-left: 3px solid var(--primary); background: var(--surface); border-radius: 6px; }
+.casehistory { margin: -6px 8px 18px; padding: 12px 16px; border-left: 3px solid var(--primary-line); background: var(--surface); border-radius: 6px; }
 .casehistory h4 { margin: 0 0 10px; }
 .grouphead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); color: var(--primary-ink); }
 .grouphead h4 { margin: 0; font-size: 14px; overflow-wrap: anywhere; }

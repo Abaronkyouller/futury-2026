@@ -4,35 +4,35 @@
  * All colours of the app are defined here and nowhere else; style.css and
  * features.css only reference these variables.
  *
- * ASSUMPTION: itsg.de could not be loaded while this file was written, so the
- * brand values below are an approximation of the ITSG look (dark corporate
- * blue, white surfaces, a red accent from the logo). Replace the four
- * "Markenfarben" with the exact hex values from the ITSG style guide; every
- * other token is derived for contrast and can stay as it is.
+ * Owner decision (2026-10-27): the former dark-blue scheme is replaced by a
+ * light-grey scheme; the sidebar is white with near-black labels. Fills use
+ * light grey, while text and icons that sit on white use --primary-ink so
+ * contrast stays readable. The red logo accent is retained.
  */
 :root {
-  /* Markenfarben (brand) – verify against https://www.itsg.de/ */
-  --itsg-blue: #004b87;
-  --itsg-blue-dark: #002b52;
+  /* Markenfarben (brand) – light grey surfaces, red logo accent */
+  --itsg-blue: #e9edf2;
+  --itsg-blue-dark: #ffffff;
   --itsg-red: #d50032;
-  --itsg-sky: #5b9bd5;
+  --itsg-sky: #8b98a6;
 
   /* Brand roles */
   --primary: var(--itsg-blue);
-  --primary-hover: #003b6b;
-  --primary-ink: #0d3d66;
-  --primary-soft: #e3edf6;
-  --primary-tint: #eef4fa;
-  --primary-line: #b3cbe0;
+  --primary-hover: #dce1e8;
+  --primary-ink: #2b3540;
+  --primary-soft: #eef1f5;
+  --primary-tint: #f6f8fa;
+  --primary-line: #d6dce3;
   --accent: var(--itsg-red);
-  --on-primary: #ffffff;
+  --on-primary: #1c2631;
+  --on-accent: #ffffff;
 
-  /* Navigation */
+  /* Navigation – white sidebar, near-black labels */
   --nav-bg: var(--itsg-blue-dark);
-  --nav-active: #0f4373;
-  --nav-border: #1d4d78;
-  --nav-text: #cddbe8;
-  --nav-muted: #8eaac4;
+  --nav-active: #eef1f5;
+  --nav-border: #e3e7ec;
+  --nav-text: #1c2631;
+  --nav-muted: #6b7683;
 
   /* Neutrals */
   --bg: #f2f4f7;
@@ -42,8 +42,8 @@
   --muted: #5f6c78;
   --border: #dde3e9;
   --border-soft: #e9edf1;
-  --code-bg: #0d2a45;
-  --code-text: #dbe8f3;
+  --code-bg: #eef1f5;
+  --code-text: #22303c;
 
   /* Status */
   --good: #1f7a46;
@@ -53,8 +53,8 @@
   --warn-line: #f2dfb0;
   --bad: #b0102f;
   --bad-bg: #fde6ea;
-  --info: var(--itsg-blue);
-  --info-bg: #e5f1fb;
+  --info: #3f4a56;
+  --info-bg: #eef1f5;
   --neutral: #485a6c;
   --neutral-bg: #e8edf2;
 
