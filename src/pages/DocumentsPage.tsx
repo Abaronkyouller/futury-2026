@@ -133,7 +133,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
     </Panel>
     <Panel>
       <div className="paneltop"><h3>Generierte Testfälle · {docCases.length}</h3><label className="checkrow"><input type="checkbox" checked={showReasoning} onChange={(e) => setShowReasoning(e.target.checked)} /> Begründung anzeigen</label></div>
-      <p className="muted small">Jeder Fall enthält Modellbegründung und aufklappbare Backend-Details mit Quellenzitat, Ontologie, Wissensgraph und Regelmodell.</p>
+      <p className="muted small">Jeder Fall enthält Modellbegründung und aufklappbare Quellenzitat, Ontologie, Wissensgraph und Regelmodell.</p>
       {!docCases.length ? <p className="muted">Noch keine Testfälle. Starten Sie oben die Analyse.</p> : docCases.map((c) => <GeneratedCaseCard key={c.id} item={c} showReasoning={showReasoning} />)}
     </Panel>
   </div>;

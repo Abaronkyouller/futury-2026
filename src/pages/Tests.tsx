@@ -63,7 +63,7 @@ export function Tests() {
     <>
       <Header
         title="Testfälle"
-        subtitle="Alle erzeugten Testfälle mit Prüfstatus und Herkunft. Abgelehnte Fälle werden nicht exportiert. Keiner der Fälle wurde in einer Entgeltabrechnungssoftware ausgeführt."
+        subtitle="Alle erzeugten Testfälle mit erwartetem Ergebnis, Prüfstatus und Herkunft. Abgelehnte Fälle werden nicht exportiert. Keiner der Fälle wurde in einer Entgeltabrechnungssoftware ausgeführt."
         action={
           <button className="primary" disabled={exportable.length === 0} onClick={() => exportPlan(exportable, sourceOf)}>
             <Download size={15} /> Testplan für Hersteller exportieren (CSV)
@@ -91,7 +91,7 @@ export function Tests() {
             <table>
               <thead>
                 <tr>
-                  {["ID", "Titel", "Technik", "Priorität", "Herkunft", "Prüfung"].map((x) => (
+                  {["ID", "Titel", "Technik", "Priorität", "Erwartet", "Herkunft", "Prüfung"].map((x) => (
                     <th key={x}>{x}</th>
                   ))}
                 </tr>
@@ -103,6 +103,17 @@ export function Tests() {
                     <td>{c.title}</td>
                     <td>{c.technique}</td>
                     <td><PriorityBadge value={c.priority} /></td>
+                    <td>
+                      {c.expectedFields.length === 0 ? (
+                        <span className="muted">kein erwartetes Ergebnis</span>
+                      ) : (
+                        c.expectedFields.map((f, i) => (
+                          <div key={i}>
+                            <small className="muted">{f.field}:</small> {f.value}
+                          </div>
+                        ))
+                      )}
+                    </td>
                     <td>{ORIGIN_LABEL[c.origin.kind]}</td>
                     <td><Status value={c.review.decision} /></td>
                   </tr>

@@ -117,7 +117,11 @@ export function GeneratedCaseCard({ item, showReasoning }: { item: GeneratedTest
       )}
 
       <h5 className="minihead">ERWARTETES ERGEBNIS · VORSCHLAG, NICHT DURCH EINE REGEL-ENGINE BESTÄTIGT</h5>
-      <FieldTable rows={item.expectedFields} />
+      {item.expectedFields.length === 0 ? (
+        <p className="muted small">Für diesen Fall ist kein erwartetes Ergebnis angegeben – vor der Ausführung ergänzen.</p>
+      ) : (
+        <FieldTable rows={item.expectedFields} />
+      )}
 
       {showReasoning && (
         <>

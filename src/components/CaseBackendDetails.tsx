@@ -13,7 +13,7 @@ export function CaseBackendDetails({ trace, checks }: { trace: CaseTrace; checks
   const nodeById = new Map(trace.graph.nodes.map((n) => [n.id, n]));
   return (
     <details className="backend">
-      <summary>Backend-Details: Quelle · Ontologie · Wissensgraph · Regelmodell <small className="muted">— {trace.summary}</small></summary>
+      <summary>Quelle · Ontologie · Wissensgraph · Regelmodell <small className="muted">— {trace.summary}</small></summary>
       <h5 className="minihead">1 QUELLE</h5>
       <div className="tags">
         <span>{trace.source.documentName}</span>
