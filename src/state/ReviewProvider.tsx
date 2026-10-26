@@ -142,20 +142,47 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const addRun = useCallback<ReviewStore["addRun"]>((requirementId, runId, cases) => {
+  const addRun = useCallback<ReviewStore["addRun"]>((requirementId, runId, cases, feedbackCaseId) => {
     setState((s) => ({
       ...s,
       cases: [...s.cases, ...cases],
       changelog: [
         ...s.changelog,
         entry({
-          kind: "Generierung",
-          requirementId,
-          summary: `${cases.length} Testfall/Testfälle in Lauf ${runId} erzeugt (${cases[0]?.origin.model ?? "?"})`,
-          after: cases.map((c) => `${c.id} · ${c.title}`).join("\n"),
+           kind: "Generierung",
+           requirementId,
+           testCaseId: feedbackCaseId,
+           summary: feedbackCaseId
+             ? `${cases.length} Ersatztestfall/Testfälle aus Feedback zu ${feedbackCaseId} erzeugt (Lauf ${runId})`
+             : `${cases.length} Testfall/Testfälle in Lauf ${runId} erzeugt (${cases[0]?.origin.model ?? "?"})`,
+           after: cases.map((c) => `${c.id} · ${c.title}`).join("\n"),
         }),
       ],
     }));
+  }, []);
+
+  const submitCaseFeedback = useCallback<ReviewStore["submitCaseFeedback"]>((caseId, comment) => {
+    setState((s) => {
+      const target = s.cases.find((c) => c.id === caseId);
+      if (!target || !comment.trim()) return s;
+      const before = target.review.comment || "Kein Feedback";
+      const review = { ...target.review, comment: comment.trim(), reviewedAt: new Date().toISOString() };
+      return {
+        ...s,
+        cases: s.cases.map((c) => c.id === caseId ? { ...c, review } : c),
+        changelog: [
+          ...s.changelog,
+          entry({
+            kind: "Prüfung",
+            requirementId: target.requirementId,
+            testCaseId: caseId,
+            summary: `Feedback zu ${caseId} zur Neuerzeugung eingereicht`,
+            before,
+            after: comment.trim(),
+          }),
+        ],
+      };
+    });
   }, []);
 
   const reviewCase = useCallback<ReviewStore["reviewCase"]>((caseId, decision, comment) => {
@@ -216,8 +243,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const store = useMemo<ReviewStore>(
-    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, updateSettings, resetCases, logEvent }),
-    [state, addRequirements, reviewRequirement, addRun, reviewCase, updateSettings, resetCases, logEvent],
+    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, updateSettings, resetCases, logEvent }),
+    [state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, updateSettings, resetCases, logEvent],
   );
 
   return <ReviewContext.Provider value={store}>{children}</ReviewContext.Provider>;

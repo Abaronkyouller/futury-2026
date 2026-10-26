@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, RefreshCw, X } from "lucide-react";
 import type { Basis, GeneratedTestCase, OriginKind, Priority } from "../types/review";
 import { ORIGIN_LABEL } from "../types/review";
 import { OPEN_VALUE_MARKER } from "../config/ai";
 import { useReviewStore } from "../state/reviewContext";
+import { useGeneration } from "../state/useGeneration";
 import { buildCaseTrace } from "../reasoning/trace";
 import { expectedStatus } from "../reasoning/expectedStatus";
 import { CaseBackendDetails } from "./CaseBackendDetails";
@@ -78,8 +79,12 @@ export function GeneratedCaseCard({
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
 }) {
-  const { reviewCase, requirements } = useReviewStore();
+  const { reviewCase, submitCaseFeedback, requirements, settings } = useReviewStore();
+  const runGeneration = useGeneration();
   const [comment, setComment] = useState(item.review.comment);
+  const [regenerating, setRegenerating] = useState(false);
+  const [feedbackResult, setFeedbackResult] = useState("");
+  const [feedbackError, setFeedbackError] = useState("");
   const [internalOpen, setInternalOpen] = useState(!collapsible);
   const open = expanded ?? internalOpen;
   const toggleOpen = () => {
@@ -96,6 +101,27 @@ export function GeneratedCaseCard({
   const displayTitle = sanitizeCaseTitle(item.title);
   // Condition bookkeeping rows are not test data (see utils/caseText.ts).
   const testData = visibleFields(item.testData);
+
+  const submitFeedback = async () => {
+    const feedback = comment.trim();
+    if (!feedback || !req) return;
+    setRegenerating(true);
+    setFeedbackResult("");
+    setFeedbackError("");
+    submitCaseFeedback(item.id, feedback);
+    const feedbackCase: GeneratedTestCase = {
+      ...item,
+      review: { ...item.review, decision: "Abgelehnt", comment: feedback, reviewedAt: new Date().toISOString() },
+    };
+    try {
+      const result = await runGeneration(req, { ...settings, maxCases: 1, useFeedback: true }, "model", feedbackCase);
+      setFeedbackResult(`Ersatztestfall ${result.cases[0]?.id ?? ""} wurde erzeugt.`);
+    } catch (error) {
+      setFeedbackError(`Feedback wurde gespeichert, die Neuerzeugung ist jedoch fehlgeschlagen: ${(error as Error).message}`);
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   return (
     <div className={`gencase ${ORIGIN_CLASS[kind]} ${showStatuses && item.review.decision === "Abgelehnt" ? "rejected" : ""} ${collapsible && !open ? "collapsed" : ""}`}>
@@ -210,6 +236,13 @@ export function GeneratedCaseCard({
         onChange={(e) => setComment(e.target.value)}
         placeholder="Rückmeldung an die KI: Was ist falsch, fehlt oder ist gut? (fließt in spätere Läufe ein)"
       />
+      <div className="actions">
+        <button className="primary" disabled={regenerating || !comment.trim() || !req} onClick={() => void submitFeedback()}>
+          <RefreshCw size={15} /> {regenerating ? "Wird neu erzeugt …" : "Feedback absenden & neu erzeugen"}
+        </button>
+      </div>
+      {feedbackResult && <p className="status good">{feedbackResult}</p>}
+      {feedbackError && <div className="notice errorbox">{feedbackError}</div>}
       <div className="actions">
         <button className="primary" onClick={() => reviewCase(item.id, "Akzeptiert", comment.trim())}>
           <Check size={15} /> Akzeptieren

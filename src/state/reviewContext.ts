@@ -28,9 +28,11 @@ export type ReviewStore = ReviewState & {
   /** Records an examiner decision/comment on a requirement; the previous value is logged. */
   reviewRequirement: (id: string, status: RequirementStatus, comment: string) => void;
   /** Adds the cases of one generation run and logs it. */
-  addRun: (requirementId: string, runId: string, cases: GeneratedTestCase[]) => void;
+  addRun: (requirementId: string, runId: string, cases: GeneratedTestCase[], feedbackCaseId?: string) => void;
   /** Records an examiner decision/comment; previous values are kept in the change log. */
   reviewCase: (caseId: string, decision: ReviewDecision, comment: string) => void;
+  /** Persists feedback before a replacement case is generated. */
+  submitCaseFeedback: (caseId: string, comment: string) => void;
   /** Updates generation settings and logs what changed. */
   updateSettings: (next: GenerationSettings) => void;
   /** Removes all generated cases and feedback; the reset itself is logged. */
