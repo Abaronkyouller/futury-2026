@@ -1,19 +1,31 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Link } from "react-router-dom";
-import { Download } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
-import { Status } from "../components/Status";
-import { GeneratedCaseCard, PriorityBadge } from "../components/GeneratedCaseCard";
+import { GeneratedCaseCard } from "../components/GeneratedCaseCard";
+import { Pager } from "../components/Pager";
 import { useReviewStore } from "../state/reviewContext";
 import { ORIGIN_LABEL, PRIORITIES } from "../types/review";
-import type { GeneratedTestCase, ReviewDecision } from "../types/review";
+import type { ChangeKind, ChangeLogEntry, GeneratedTestCase, Priority } from "../types/review";
 import { download } from "../utils/download";
-import { toCsv } from "../utils/format";
+import { formatDateTime, toCsv } from "../utils/format";
 import { sanitizeCaseTitle, visibleFields } from "../utils/caseText";
 
-const FILTERS = ["Alle", "Offen", "Akzeptiert", "Abgelehnt"] as const;
-type Filter = (typeof FILTERS)[number];
+const REVIEW_FILTERS = ["Alle", "Offen", "Akzeptiert", "Abgelehnt"] as const;
+type ReviewFilter = (typeof REVIEW_FILTERS)[number];
+type PriorityFilter = "Alle" | Priority;
+const TESTS_PER_PAGE = 10;
+
+const KIND_CLASS: Record<ChangeKind, string> = {
+  Dokument: "kind-doc",
+  Extraktion: "kind-extract",
+  Anforderung: "kind-req",
+  Generierung: "kind-gen",
+  Prüfung: "kind-review",
+  Einstellungen: "kind-settings",
+  Zurücksetzen: "kind-reset",
+};
 
 /** One CSV row per case; steps and fields are flattened so the vendor can follow them. */
 function exportPlan(cases: GeneratedTestCase[], sourceOf: (id: string) => string) {
@@ -44,89 +56,101 @@ function exportPlan(cases: GeneratedTestCase[], sourceOf: (id: string) => string
   );
 }
 
-/**
- * Test plan (H3/H4): all generated cases with their review state, plus the
- * illustrative sample cases. Nothing here has been executed in a payroll system.
- */
+/** Timeline entries directly related to one generated test case. */
+function CaseHistory({ entries }: { entries: ChangeLogEntry[] }) {
+  return <div className="casehistory">
+    <h4>Änderungshistorie</h4>
+    {entries.length === 0 ? <p className="muted small">Für diesen Testfall sind noch keine Änderungen protokolliert.</p> : (
+      <ol className="timeline">
+        {entries.map((entry) => <li key={entry.id}>
+          <time>{formatDateTime(entry.timestamp)}</time>
+          <div>
+            <span className={`kind ${KIND_CLASS[entry.kind]}`}>{entry.kind}</span>
+            <b>{entry.summary}</b>
+            {(entry.before || entry.after) && <table className="detail compact"><tbody>
+              {entry.before && <tr><th>Vorher</th><td className="prewrap">{entry.before}</td></tr>}
+              {entry.after && <tr><th>Nachher</th><td className="prewrap">{entry.after}</td></tr>}
+            </tbody></table>}
+          </div>
+        </li>)}
+      </ol>
+    )}
+  </div>;
+}
+
+/** Paginated test plan with collapsible details, filters and per-case history. */
 export function Tests() {
-  const { cases, requirements } = useReviewStore();
-  const [filter, setFilter] = useState<Filter>("Alle");
+  const { cases, requirements, changelog } = useReviewStore();
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("Alle");
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("Alle");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const shownCases = cases;
-  const visible = shownCases
-    .filter((c) => filter === "Alle" || c.review.decision === (filter as ReviewDecision))
+  const normalizedQuery = query.trim().toLocaleLowerCase("de-DE");
+  const filtered = cases
+    .filter((item) => reviewFilter === "Alle" || item.review.decision === reviewFilter)
+    .filter((item) => priorityFilter === "Alle" || item.priority === priorityFilter)
+    .filter((item) => !normalizedQuery || [item.id, item.requirementId, item.title, item.technique]
+      .some((value) => value.toLocaleLowerCase("de-DE").includes(normalizedQuery)))
     .sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.id.localeCompare(b.id));
-  const active = shownCases.find((c) => c.id === selected) ?? visible[0];
+  const pageCount = Math.max(1, Math.ceil(filtered.length / TESTS_PER_PAGE));
+  const currentPage = Math.min(page, pageCount);
+  const pageCases = filtered.slice((currentPage - 1) * TESTS_PER_PAGE, currentPage * TESTS_PER_PAGE);
   const sourceOf = (id: string) => requirements.find((r) => r.id === id)?.source ?? "";
   const exportable = cases.filter((c) => c.review.decision !== "Abgelehnt");
-
-  return (
-    <>
-      <Header
-        title="Testfälle"
-        subtitle="Alle erzeugten Testfälle mit erwartetem Ergebnis, Prüfstatus und Herkunft. Abgelehnte Fälle werden nicht exportiert. Keiner der Fälle wurde in einer Entgeltabrechnungssoftware ausgeführt."
-        action={
-          <button className="primary" disabled={exportable.length === 0} onClick={() => exportPlan(exportable, sourceOf)}>
-            <Download size={15} /> Testplan für Hersteller exportieren (CSV)
-          </button>
-        }
-      />
-      <div className="filters">
-        {FILTERS.map((f) => (
-          <button key={f} className={filter === f ? "selected" : ""} onClick={() => setFilter(f)}>
-            {f} · {f === "Alle" ? shownCases.length : shownCases.filter((c) => c.review.decision === f).length}
-          </button>
-        ))}
-      </div>
-
-      {shownCases.length === 0 ? (
-        <Panel>
-          <p className="muted">
-            Noch keine erzeugten Testfälle. Laden Sie unter <Link to="/documents">Dokumente & Extraktion</Link> eine Spezifikation hoch
-            oder nutzen Sie den <Link to="/generate">Testfall-Generator</Link>.
-          </p>
-        </Panel>
-      ) : (
-        <div className="reqgrid">
-          <Panel className="tablepanel">
-            <table>
-              <thead>
-                <tr>
-                  {["ID", "Titel", "Technik", "Priorität", "Erwartet", "Herkunft", "Prüfung"].map((x) => (
-                    <th key={x}>{x}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((c) => (
-                  <tr key={c.id} onClick={() => setSelected(c.id)} className={active?.id === c.id ? "highlight" : ""}>
-                    <td><code>{c.id}</code><br /><small className="muted">{c.requirementId}</small></td>
-                    <td>{sanitizeCaseTitle(c.title)}</td>
-                    <td>{c.technique}</td>
-                    <td><PriorityBadge value={c.priority} /></td>
-                    <td>
-                      {c.expectedFields.length === 0 ? (
-                        <span className="muted">kein erwartetes Ergebnis</span>
-                      ) : (
-                        c.expectedFields.map((f, i) => (
-                          <div key={i}>
-                            <small className="muted">{f.field}:</small> {f.value}
-                          </div>
-                        ))
-                      )}
-                    </td>
-                    <td>{ORIGIN_LABEL[c.origin.kind]}</td>
-                    <td><Status value={c.review.decision} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Panel>
-          <div>{active && <GeneratedCaseCard key={active.id} item={active} showReasoning />}</div>
-        </div>
-      )}
-
-    </>
+  const resetPage = () => { setPage(1); setSelected(null); };
+  const historyFor = (item: GeneratedTestCase) => [...changelog].reverse().filter((entry) =>
+    entry.testCaseId === item.id
+    || (entry.kind === "Generierung" && entry.requirementId === item.requirementId && entry.after?.includes(item.id)),
   );
+
+  return <>
+    <Header
+      title="Testfälle"
+      subtitle="Testfälle filtern, aufklappen und gemeinsam mit ihrer Änderungshistorie prüfen. Maximal zehn Fälle werden je Seite angezeigt."
+      action={<button className="primary" disabled={exportable.length === 0} onClick={() => exportPlan(exportable, sourceOf)}><Download size={15} /> Testplan für Hersteller exportieren (CSV)</button>}
+    />
+
+    {cases.length === 0 ? <Panel><p className="muted">
+      Noch keine erzeugten Testfälle. Laden Sie unter <Link to="/documents">Dokumente & Testfälle</Link> eine Spezifikation hoch
+      oder nutzen Sie den <Link to="/generate">Testfall-Generator</Link>.
+    </p></Panel> : <>
+      <Panel>
+        <div className="search wide">
+          <Search size={15} />
+          <input placeholder="Testfall, Anforderung, Titel oder Technik suchen" value={query} onChange={(event) => { setQuery(event.target.value); resetPage(); }} />
+        </div>
+        <div className="filters">
+          <label className="field inline">Priorität
+            <select value={priorityFilter} onChange={(event) => { setPriorityFilter(event.target.value as PriorityFilter); resetPage(); }}>
+              <option>Alle</option>
+              {PRIORITIES.map((priority) => <option key={priority}>{priority}</option>)}
+            </select>
+          </label>
+          <label className="field inline">Prüfstatus
+            <select value={reviewFilter} onChange={(event) => { setReviewFilter(event.target.value as ReviewFilter); resetPage(); }}>
+              {REVIEW_FILTERS.map((status) => <option key={status}>{status}</option>)}
+            </select>
+          </label>
+          <span className="muted small">{filtered.length} von {cases.length} Testfall/Testfällen</span>
+          {(query || priorityFilter !== "Alle" || reviewFilter !== "Alle") && <button onClick={() => { setQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); resetPage(); }}>Filter zurücksetzen</button>}
+        </div>
+
+        {filtered.length === 0 ? <p className="muted">Keine Testfälle entsprechen den gewählten Filtern.</p> : <div className="casegroup">
+          {pageCases.map((item) => <Fragment key={item.id}>
+            <GeneratedCaseCard
+              item={item}
+              showReasoning
+              collapsible
+              expanded={selected === item.id}
+              onExpandedChange={(open) => setSelected(open ? item.id : null)}
+            />
+            {selected === item.id && <CaseHistory entries={historyFor(item)} />}
+          </Fragment>)}
+          <Pager page={currentPage} pageCount={pageCount} total={filtered.length} onPage={(next) => { setPage(next); setSelected(null); }} />
+        </div>}
+      </Panel>
+    </>}
+  </>;
 }

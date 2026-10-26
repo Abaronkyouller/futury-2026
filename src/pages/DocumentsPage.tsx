@@ -4,6 +4,7 @@ import { FileText, Layers, Search, Sparkles, Trash2, Upload } from "lucide-react
 import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
 import { GeneratedCaseCard } from "../components/GeneratedCaseCard";
+import { Pager } from "../components/Pager";
 import { AI_MODEL, EXTRACTION_TEMPERATURE } from "../config/ai";
 import { ACCEPTED_FILE_TYPES, CASES_PER_PAGE } from "../config/documents";
 import { extractRequirements, sectionBatches } from "../ai/extract";
@@ -38,31 +39,6 @@ type CaseSort = "Priorität" | "Offene zuerst";
  * grouped by their source section (the "Quelle" of the requirement).
  */
 const NO_SECTION = "Ohne Abschnittsangabe";
-
-/**
- * Page numbers to show: the first and last page plus a window around the
- * current page. `null` marks an elided range (rendered as an ellipsis).
- */
-function pageNumbers(page: number, pageCount: number, windowSize = 5): (number | null)[] {
-  const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
-  if (pageCount <= windowSize + 2) return range(1, pageCount);
-  if (page <= windowSize - 1) return [...range(1, windowSize), null, pageCount];
-  if (page >= pageCount - windowSize + 2) return [1, null, ...range(pageCount - windowSize + 1, pageCount)];
-  const half = Math.floor(windowSize / 2);
-  return [1, null, ...range(page - half, page + half), null, pageCount];
-}
-
-/** Numbered pagination: previous, 1…n, next and the current page number. */
-function Pager({ page, pageCount, total, onPage }: { page: number; pageCount: number; total: number; onPage: (page: number) => void }) {
-  return <nav className="pager" aria-label="Seitennavigation">
-    <button disabled={page <= 1} onClick={() => onPage(page - 1)}>←</button>
-    {pageNumbers(page, pageCount).map((p, i) => p === null
-      ? <span key={`gap-${i}`} className="gap">…</span>
-      : <button key={p} className={p === page ? "active" : ""} aria-current={p === page ? "page" : undefined} onClick={() => onPage(p)}>{p}</button>)}
-    <button disabled={page >= pageCount} onClick={() => onPage(page + 1)}>→</button>
-    <span className="pagerinfo">Seite {page} von {pageCount} · {total} Testfall/Testfälle</span>
-  </nav>;
-}
 
 /**
  * One source section with the test cases derived from it. Each section is

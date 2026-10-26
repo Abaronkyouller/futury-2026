@@ -59,6 +59,8 @@ export function GeneratedCaseCard({
   collapsible = false,
   showStatuses = true,
   showTitle = true,
+  expanded,
+  onExpandedChange,
 }: {
   item: GeneratedTestCase;
   showReasoning: boolean;
@@ -72,10 +74,19 @@ export function GeneratedCaseCard({
   showStatuses?: boolean;
   /** Hide the generated scenario title beneath the test-case ID. */
   showTitle?: boolean;
+  /** Optional controlled expansion state, used when only one list item may be open. */
+  expanded?: boolean;
+  onExpandedChange?: (open: boolean) => void;
 }) {
   const { reviewCase, requirements } = useReviewStore();
   const [comment, setComment] = useState(item.review.comment);
-  const [open, setOpen] = useState(!collapsible);
+  const [internalOpen, setInternalOpen] = useState(!collapsible);
+  const open = expanded ?? internalOpen;
+  const toggleOpen = () => {
+    const next = !open;
+    setInternalOpen(next);
+    onExpandedChange?.(next);
+  };
   const failed = item.checks.filter((c) => !c.passed);
   const kind = item.origin.kind;
   const req = requirements.find((r) => r.id === item.requirementId);
@@ -93,13 +104,13 @@ export function GeneratedCaseCard({
         role={collapsible ? "button" : undefined}
         tabIndex={collapsible ? 0 : undefined}
         aria-expanded={collapsible ? open : undefined}
-        onClick={collapsible ? () => setOpen((o) => !o) : undefined}
+        onClick={collapsible ? toggleOpen : undefined}
         onKeyDown={
           collapsible
             ? (e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  setOpen((o) => !o);
+                  toggleOpen();
                 }
               }
             : undefined
