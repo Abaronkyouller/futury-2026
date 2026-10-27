@@ -134,7 +134,7 @@ export function Validation() {
     <>
       <Header
         title="Validierung & Prüfbericht"
-        subtitle="Ergebnisse aus der Entgeltabrechnungssoftware hochladen und mit den erwarteten Werten eines Testfalls abgleichen. Die KI und ein regelbasierter Zeilenabgleich bewerten unabhängig voneinander und werden gegenübergestellt; die Entscheidung trifft der Prüfer."
+        // subtitle="Ergebnisse aus der Entgeltabrechnungssoftware hochladen und mit den erwarteten Werten eines Testfalls abgleichen. Die KI und ein regelbasierter Zeilenabgleich bewerten unabhängig voneinander und werden gegenübergestellt; die Entscheidung trifft der Prüfer."
         action={
           <div className="actions">
             <button onClick={() => window.print()} disabled={!comparisons.length}><Printer size={15} /> Drucken / PDF</button>
