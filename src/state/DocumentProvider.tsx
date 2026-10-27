@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { RETIRED_WARNING_PREFIXES } from "../config/documents";
 import { ingestFile, versionLabel } from "../documents/ingest";
-import { deleteDocument, loadDocuments, saveDocument } from "../documents/storage";
+import { deleteDocument, loadDocumentParseCache, loadDocuments, saveDocument, saveDocumentParseCache } from "../documents/storage";
+import { cloneParsedDocument, createDocumentParseCache, documentParseCacheKey } from "../documents/parseCache";
 import { DOC_ROLES } from "../types/document";
 import type { DocRole, SourceDocument } from "../types/document";
+import type { DocumentParseCacheEntry } from "../types/documentParseCache";
 import { DocumentContext } from "./documentContext";
 import type { DocumentStore } from "./documentContext";
 import { useReviewStore } from "./reviewContext";
@@ -47,7 +49,12 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     loadDocuments()
       .then((docs) => {
         if (!cancelled) {
-          setDocuments(docs.map(normalizeDocument).sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt)));
+          const normalized = docs.map(normalizeDocument).sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
+          setDocuments(normalized);
+          // Backfill the parse cache for documents uploaded before this feature.
+          for (const doc of normalized) {
+            void saveDocumentParseCache(createDocumentParseCache(doc)).catch(() => undefined);
+          }
         }
       })
       .catch(() => !cancelled && setStorageWarning(STORAGE_WARNING))
@@ -70,12 +77,23 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
       // Sequential: PDF parsing is CPU-heavy and progress stays readable.
       for (const file of files) {
         try {
-          const read = await ingestFile(file, (p) => onProgress(file.name, p));
+          onProgress(file.name, { stage: "Lokaler Dokument-Cache wird geprüft" });
+          let cached: DocumentParseCacheEntry | undefined;
+          try {
+            cached = await loadDocumentParseCache(documentParseCacheKey(file.name, file.size, file.lastModified));
+            cached ??= await loadDocumentParseCache(documentParseCacheKey(file.name, file.size));
+          } catch {
+            // Cache access is optional; parsing below remains the fallback.
+          }
+          const read = cached
+            ? cloneParsedDocument(cached.document, file)
+            : await ingestFile(file, (p) => onProgress(file.name, p));
           const predecessor = findPredecessor(read, known);
           const doc = { ...read, predecessorId: predecessor?.id };
           known.push(doc);
           added.push(doc);
           persist(doc);
+          await saveDocumentParseCache(createDocumentParseCache(doc)).catch(() => undefined);
           setDocuments((d) => [...d, doc]);
           logEvent("Dokument", {
             summary: `„${doc.name}“ hochgeladen: ${doc.sections.length} Abschnitte, Dokumentart ${doc.classification.kind}, Rolle ${doc.role}${predecessor ? `, Vorgängerversion „${predecessor.name}“` : ""}`,

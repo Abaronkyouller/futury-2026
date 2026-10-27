@@ -1,5 +1,7 @@
 import type { SourceDocument } from "../types/document";
 import type { PayrollResult } from "../types/validation";
+import type { GenerationCacheEntry } from "../types/generationCache";
+import type { DocumentParseCacheEntry } from "../types/documentParseCache";
 
 /**
  * Persists uploaded documents in this browser's IndexedDB. Full specification
@@ -7,13 +9,12 @@ import type { PayrollResult } from "../types/validation";
  * kept apart from the review store. If IndexedDB is unavailable (private mode,
  * blocked storage) the app keeps working in memory and reports that.
  *
- * Version 2 adds the store "results" for payroll results imported on the
- * "Validierung & Bericht" page; existing documents are kept on upgrade.
+ * Version 4 adds parsed-document caches; existing data is retained.
  */
 
 const DB_NAME = "futury-documents";
-const DB_VERSION = 2;
-const STORES = ["documents", "results"] as const;
+const DB_VERSION = 4;
+const STORES = ["documents", "results", "generationCache", "documentParseCache"] as const;
 type StoreName = (typeof STORES)[number];
 
 function open(): Promise<IDBDatabase> {
@@ -70,4 +71,20 @@ export async function saveResult(result: PayrollResult): Promise<void> {
 
 export async function deleteResult(id: string): Promise<void> {
   await run("results", "readwrite", (s) => s.delete(id));
+}
+
+export function loadGenerationCache(id: string): Promise<GenerationCacheEntry | undefined> {
+  return run("generationCache", "readonly", (s) => s.get(id) as IDBRequest<GenerationCacheEntry | undefined>);
+}
+
+export async function saveGenerationCache(entry: GenerationCacheEntry): Promise<void> {
+  await run("generationCache", "readwrite", (s) => s.put(entry));
+}
+
+export function loadDocumentParseCache(id: string): Promise<DocumentParseCacheEntry | undefined> {
+  return run("documentParseCache", "readonly", (s) => s.get(id) as IDBRequest<DocumentParseCacheEntry | undefined>);
+}
+
+export async function saveDocumentParseCache(entry: DocumentParseCacheEntry): Promise<void> {
+  await run("documentParseCache", "readwrite", (s) => s.put(entry));
 }

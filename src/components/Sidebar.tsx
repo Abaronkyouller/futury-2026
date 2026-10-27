@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   FileUp,
   FlaskConical,
-  Sparkles,
   CheckCircle2,
   Network,
   History,
@@ -28,7 +27,7 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <Link to="/" className="brand" aria-label="Zur Übersicht">
-        <span className="brandmark">P</span>
+        {/* <span className="brandmark">P</span> */}
         <div>
           <img className="brandlogo" src={logoUrl} alt="Prüfassistent" />
         </div>

@@ -42,6 +42,8 @@ export type ReviewStore = ReviewState & {
   reviewRequirement: (id: string, status: RequirementStatus, comment: string) => void;
   /** Adds the cases of one generation run and logs it. */
   addRun: (requirementId: string, runId: string, cases: GeneratedTestCase[], feedbackCaseId?: string) => void;
+  /** Restores quote-verified requirements and cases from the document cache. */
+  restoreCachedGeneration: (documentName: string, cachedAt: string, requirements: Req[], cases: GeneratedTestCase[]) => void;
   /** Records an examiner decision/comment; previous values are kept in the change log. */
   reviewCase: (caseId: string, decision: ReviewDecision, comment: string) => void;
   /** Persists feedback before a replacement case is generated. */

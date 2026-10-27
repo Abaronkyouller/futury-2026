@@ -90,6 +90,7 @@ export async function ingestFile(file: File, onProgress: (p: IngestProgress) => 
     name: file.name,
     format,
     sizeBytes: file.size,
+    fileLastModified: file.lastModified,
     uploadedAt,
     pageCount,
     version,
