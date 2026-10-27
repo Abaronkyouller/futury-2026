@@ -12,8 +12,6 @@ import { cases as sampleCases } from "../data/testCases";
 import type { Req } from "../types/requirement";
 import { truncate } from "../documents/text";
 
-const ORIGIN_FILTERS = ["Alle", "Aus Dokumenten", "Beispieldaten"] as const;
-type OriginFilter = (typeof ORIGIN_FILTERS)[number];
 const REQS_PER_PAGE = 6;
 
 /**
@@ -27,7 +25,6 @@ export function GraphPage() {
   const { cases, requirements, comparisons } = useReviewStore();
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState("");
-  const [origin, setOrigin] = useState<OriginFilter>("Alle");
   const [onlyWarnings, setOnlyWarnings] = useState(false);
   const [page, setPage] = useState(1);
 
@@ -46,7 +43,6 @@ export function GraphPage() {
   // Newest document requirements first, then those with test cases.
   const ordered = [...requirements].reverse().sort((a, b) => Number(caseCount(b) > 0) - Number(caseCount(a) > 0));
   const filtered = ordered
-    .filter((r) => origin === "Alle" || (origin === "Aus Dokumenten" ? Boolean(r.origin) : !r.origin))
     .filter((r) => !onlyWarnings || (warningsOf.get(r.id) ?? 0) > 0)
     .filter((r) => { const h = requirementHaystack(r, cases); return q.split(/\s+/).filter(Boolean).every((t) => h.includes(t)); });
   const pageCount = Math.max(1, Math.ceil(filtered.length / REQS_PER_PAGE));
@@ -71,7 +67,7 @@ export function GraphPage() {
     setParams(hit ? { req: r.id, case: hit.id } : { req: r.id });
     setOpened({});
   };
-  const resetFilters = () => { setQuery(""); setOrigin("Alle"); setOnlyWarnings(false); setPage(1); };
+  const resetFilters = () => { setQuery(""); setOnlyWarnings(false); setPage(1); };
 
 
   return (
@@ -92,17 +88,12 @@ export function GraphPage() {
           onPickCase={(c) => { setQuery(c.id); setPage(1); setParams({ req: c.requirementId, case: c.id }); setOpened({}); }}
         />
         <div className="filters">
-          <label className="field inline">Herkunft
-            <select value={origin} onChange={(e) => { setOrigin(e.target.value as OriginFilter); setPage(1); }}>
-              {ORIGIN_FILTERS.map((o) => <option key={o}>{o}</option>)}
-            </select>
-          </label>
           <label className="checkrow small">
             <input type="checkbox" checked={onlyWarnings} onChange={(e) => { setOnlyWarnings(e.target.checked); setPage(1); }} />
             Nur mit Belegwarnungen
           </label>
           <span className="muted small">{filtered.length} von {requirements.length} Anforderung(en)</span>
-          {(query || origin !== "Alle" || onlyWarnings) && <button onClick={resetFilters}>Filter zurücksetzen</button>}
+          {(query || onlyWarnings) && <button onClick={resetFilters}>Filter zurücksetzen</button>}
         </div>
         {filtered.length === 0 ? (
           <p className="muted">Keine Anforderung entspricht der Suche.</p>

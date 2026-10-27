@@ -179,7 +179,7 @@ tr.openvalue td { background: var(--assumption-bg); color: var(--assumption); }
 .detail.compact th { width: 90px; }
 
 /* ---------- Traceability: traceback per test case ---------- */
-.reqpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-bottom: 6px; }
+.reqpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 10px; margin-bottom: 6px; }
 .reqpickitem { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 13px; font-weight: 400; }
 .reqpickitem:hover { border-color: var(--primary-line); background: var(--primary-tint); }
 .reqpickitem.selected { border-color: var(--primary-ink); box-shadow: 0 0 0 2px var(--primary-line); background: var(--primary-tint); }
@@ -391,3 +391,35 @@ button.docname { padding: 0; }
 .confirmbox h3 { margin: 2px 0 6px; font-size: 18px; }
 .confirmbox p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
 .confirmactions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+
+/* Long words (file names, UUIDs, table rows from PDFs) wrap instead of running out of their box. */
+.reqpickitem, .reqpickitem > *, .tracecase, .tracecase > summary > *, .tracebody, .tracelead, .stepbody,
+.steptitle, .tracelist, .tracelist li, .tracewarn, .traceinfo, .tracechecks li > span, .quote, .combolist li,
+.paneltop h3, .paneltop > div { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.tracebody, .stepbody { overflow: hidden; }
+
+/* ---------- Overview: Prüfablauf steps as buttons ----------
+ * The four steps fill the row evenly (2 × 2 below 1100 px, 1 per row on phones). They are
+ * real buttons (keyboard accessible) but keep the tile look; the hover uses the
+ * ITSG red as accent.
+ */
+.pipeline { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+button.step {
+  position: relative;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  width: 100%; min-height: 96px; margin: 0;
+  padding: 16px 44px 16px 16px;
+  text-align: left;
+  font-family: inherit; font-size: inherit; letter-spacing: normal; font-weight: 400;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+button.step small { margin: 0; font-size: 12px; }
+button.step b { font-size: 15px; line-height: 1.35; }
+button.step.stepwarn { background: var(--warn-bg); border-color: var(--warn-line); }
+button.step:hover:not(:disabled) { background: var(--button-tint); border-color: var(--button); }
+button.step:hover .steparrow { color: var(--button); transform: translateX(2px); }
+.steparrow { position: absolute; right: 14px; top: 50%; margin-top: -9px; color: var(--muted); transition: transform 0.15s, color 0.15s; }
+@media (max-width: 1100px) { .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .pipeline { grid-template-columns: 1fr; } }
