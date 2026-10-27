@@ -212,3 +212,52 @@ tr.openvalue td { background: var(--assumption-bg); color: var(--assumption); }
 
 label.checkrow { flex-wrap: nowrap; align-items: flex-start; }
 label.checkrow input { margin-top: 2px; }
+
+/* ---------- Validierung & Bericht ---------- */
+.kind-validation { background: var(--rule-bg); color: var(--rule); }
+.block { display: block; }
+.valgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.resultitem { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin: 10px 0; background: var(--surface); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.resultitem.chosen { border-color: var(--primary-ink); box-shadow: 0 0 0 2px var(--primary-soft); }
+.resultitem .warnings, .resultitem .sourcetext { flex-basis: 100%; }
+.assessors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.assessor { border: 1px solid var(--border); border-top: 4px solid var(--generated); border-radius: 10px; padding: 12px 14px; background: var(--surface); }
+.assessor-rule { border-top-color: var(--rule); }
+.assessor p { margin: 8px 0 0; line-height: 1.5; }
+table.cmp th, table.cmp td { vertical-align: top; }
+table.cmp tbody th { text-align: left; font-weight: 600; background: var(--surface-2); padding: 12px 14px; border-top: 1px solid var(--border-soft); }
+table.cmp tbody tr { cursor: default; }
+table.cmp tbody tr.disagree td, table.cmp tbody tr.disagree th { background: var(--warn-bg); }
+.observed { margin-top: 6px; font-size: 12px; }
+.quotecheck { display: block; margin-top: 4px; font-size: 11px; }
+.quotecheck.ok { color: var(--good); }
+.quotecheck.fail { color: var(--bad); font-weight: 600; }
+.agree, .disagreetag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; }
+.agree { color: var(--good); }
+.disagreetag { color: var(--warn); }
+.feedbackform { margin-top: 20px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 16px; background: var(--surface-2); }
+.feedbackform h4 { margin: 0 0 6px; }
+.feedbackform select { padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+.feedbackform textarea { margin-top: 12px; }
+
+@media (max-width: 1100px) {
+  .valgrid, .assessors { grid-template-columns: 1fr; }
+}
+@media print {
+  .valgrid, .feedbackform, details { display: none; }
+}
+.heading .actions button { white-space: nowrap; }
+
+/* Searchable test-case picker (Validierung) */
+.combobox { position: relative; }
+.comboinput { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); padding: 0 10px; }
+.comboinput input { flex: 1; border: 0; outline: 0; padding: 10px 0; background: transparent; color: var(--text); min-width: 0; }
+.comboinput:focus-within { border-color: var(--primary-ink); box-shadow: 0 0 0 2px var(--primary-soft); }
+.combolist { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; max-height: 340px; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px var(--shadow); }
+.combolist li { padding: 8px 10px; border-radius: 6px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; color: var(--text); }
+.combolist li small { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combolist li.active { background: var(--primary-soft); }
+.combolist li.selected .combomain { font-weight: 600; }
+.combomain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
+.combotag { font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 7px; background: var(--source-bg); color: var(--source); }
+.comboempty { color: var(--muted); cursor: default; }

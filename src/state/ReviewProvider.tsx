@@ -8,6 +8,8 @@ import { ReviewContext } from "./reviewContext";
 import type { LogInput, ReviewState, ReviewStore } from "./reviewContext";
 import { sanitizeCaseTitle } from "../utils/caseText";
 import { redistributePriorities } from "../utils/priority";
+import type { ComparisonFeedback, ResultComparison } from "../types/validation";
+import { normalizeComparison } from "../ai/compare";
 
 const PRIORITY_ASSIGNMENT_VERSION = 1;
 
@@ -16,6 +18,7 @@ const EMPTY: ReviewState = {
   cases: [],
   changelog: [],
   settings: DEFAULT_SETTINGS,
+  comparisons: [],
   priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
 };
 
@@ -52,6 +55,7 @@ function load(): ReviewState {
       cases: resetPriorities ? redistributePriorities(normalizedCases) : normalizedCases,
       changelog: parsed.changelog ?? [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings, model: AI_MODEL },
+      comparisons: (parsed.comparisons ?? []).map(normalizeComparison),
       priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
     };
   } catch {
@@ -91,6 +95,15 @@ function diffSettings(a: GenerationSettings, b: GenerationSettings): string[] {
     .filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]))
     .map((k) => `${SETTING_LABEL[k]}: ${JSON.stringify(a[k])} → ${JSON.stringify(b[k])}`);
 }
+
+/** Short text of a comparison outcome for the change log. */
+function describeComparison(c: ResultComparison): string {
+  const models = c.assessments.map((a) => `${a.label}: ${a.ok ? a.overall : "Fehler"}`).join(" · ");
+  return `${models} · Konsens: ${c.consensus}`;
+}
+
+const describeFeedback = (f: ComparisonFeedback | undefined) =>
+  f ? `${f.verdict} · zutreffend: ${f.rating}${f.comment ? ` · "${f.comment}"` : ""}` : "Keine Prüferentscheidung";
 
 const describeReq = (r: Req) => `${r.status}${r.comment ? ` · "${r.comment}"` : ""}`;
 
@@ -212,6 +225,49 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const addComparison = useCallback<ReviewStore["addComparison"]>((comparison) => {
+    setState((s) => ({
+      ...s,
+      comparisons: [...s.comparisons, comparison],
+      changelog: [
+        ...s.changelog,
+        entry({
+          kind: "Validierung",
+          requirementId: comparison.requirementId,
+          testCaseId: comparison.testCaseId,
+          summary: `Ergebnis „${comparison.resultName}“ mit ${comparison.testCaseId} abgeglichen (${comparison.id})`,
+          after: describeComparison(comparison),
+        }),
+      ],
+    }));
+  }, []);
+
+  const reviewComparison = useCallback<ReviewStore["reviewComparison"]>((id, feedback) => {
+    setState((s) => {
+      const target = s.comparisons.find((c) => c.id === id);
+      if (!target) return s;
+      const before = describeFeedback(target.feedback);
+      const after = describeFeedback(feedback);
+      const fieldsChanged = JSON.stringify(target.feedback?.fieldVerdicts ?? {}) !== JSON.stringify(feedback.fieldVerdicts);
+      if (before === after && !fieldsChanged) return s;
+      return {
+        ...s,
+        comparisons: s.comparisons.map((c) => (c.id === id ? { ...c, feedback } : c)),
+        changelog: [
+          ...s.changelog,
+          entry({
+            kind: "Validierung",
+            requirementId: target.requirementId,
+            testCaseId: target.testCaseId,
+            summary: `Prüferentscheidung zu Abgleich ${id} („${target.resultName}“): ${feedback.verdict}`,
+            before,
+            after: `${after}\nFelder: ${Object.entries(feedback.fieldVerdicts).map(([k, v]) => `${k}: ${v}`).join("; ")}`,
+          }),
+        ],
+      };
+    });
+  }, []);
+
   const updateSettings = useCallback<ReviewStore["updateSettings"]>((next) => {
     setState((s) => {
       const changes = diffSettings(s.settings, next);
@@ -243,8 +299,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const store = useMemo<ReviewStore>(
-    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, updateSettings, resetCases, logEvent }),
-    [state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, updateSettings, resetCases, logEvent],
+    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, updateSettings, resetCases, logEvent }),
+    [state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, updateSettings, resetCases, logEvent],
   );
 
   return <ReviewContext.Provider value={store}>{children}</ReviewContext.Provider>;

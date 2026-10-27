@@ -23,12 +23,12 @@ function NodeBox({ node, active, onSelect }: { node: TraceNode; active: boolean;
  * test case -> expected -> observed -> finding. Rejected proposals are hidden.
  */
 export function GraphPage() {
-  const { cases, requirements } = useReviewStore();
+  const { cases, requirements, comparisons } = useReviewStore();
   const [params, setParams] = useSearchParams();
   const withCases = requirements.filter((r) => cases.some((c) => c.requirementId === r.id));
   const reqId = params.get("req") ?? withCases[withCases.length - 1]?.id ?? "REQ-EEL-028";
   const req = requirements.find((r) => r.id === reqId) ?? requirements[0];
-  const graph = buildTraceGraph(req, cases);
+  const graph = buildTraceGraph(req, cases, comparisons);
   const [selected, setSelected] = useState<TraceNode | null>(null);
   const active = (selected && [...graph.spine, ...graph.lanes.flat()].find((n) => n.id === selected.id)) ?? graph.spine[0];
 

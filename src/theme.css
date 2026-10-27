@@ -68,4 +68,7 @@
   --rule: #0d6f86;
   --rule-bg: #e0f2f6;
   --missing: #98a4ae;
+
+  /* Elevation of floating lists (dropdowns) */
+  --shadow: rgba(16, 24, 32, 0.14);
 }

@@ -4,6 +4,7 @@ import { ORIGIN_LABEL } from "../types/review";
 import { cases as sampleCases } from "../data/testCases";
 import { OPEN_VALUE_MARKER } from "../config/ai";
 import { sanitizeCaseTitle } from "./caseText";
+import type { ResultComparison } from "../types/validation";
 
 /**
  * Builds the traceability chain for one requirement:
@@ -103,7 +104,38 @@ const CASE_EVIDENCE: Record<GeneratedTestCase["origin"]["kind"], Evidence> = {
   "offline-demo": "demo",
 };
 
-function generatedLane(c: GeneratedTestCase): TraceNode[] {
+/**
+ * Observed result and finding of a case from its latest comparison
+ * (Validierung & Bericht). The imported file is evidence that a result exists;
+ * the finding is binding only once the examiner decided.
+ */
+function observedNodes(c: GeneratedTestCase, cmp: ResultComparison | undefined): TraceNode[] {
+  if (!cmp) {
+    return [
+      { id: `${c.id}-obs`, kind: "Beobachtet", label: c.execution, evidence: "missing", details: [["Hinweis", "Für diesen Fall wurde kein Datensatz aus der Entgeltabrechnung importiert"]] },
+      { id: `${c.id}-fnd`, kind: "Befund", label: "Noch kein Befund", evidence: "missing", details: [["Hinweis", "Erfordert ein beobachtetes Ergebnis"]] },
+    ];
+  }
+  const models = cmp.assessments.map((a) => [a.label, a.ok ? `${a.overall} – ${a.summary || "ohne Zusammenfassung"}` : `Fehler: ${a.error ?? ""}`] as [string, string]);
+  return [
+    {
+      id: `${c.id}-obs`, kind: "Beobachtet", label: `Importiert: ${cmp.resultName}`, evidence: "source",
+      details: [["Ergebnisdatei", cmp.resultName], ["Abgleich", `${cmp.id} · ${cmp.createdAt}`], ...models],
+    },
+    cmp.feedback
+      ? {
+          id: `${c.id}-fnd`, kind: "Befund", label: `Prüfer: ${cmp.feedback.verdict}`, evidence: "source",
+          details: [["Prüferurteil", cmp.feedback.verdict], ["Zutreffende Einschätzung", cmp.feedback.rating], ["Kommentar", cmp.feedback.comment || "–"],
+            ...Object.entries(cmp.feedback.fieldVerdicts).map(([k, v]) => [k, v] as [string, string])],
+        }
+      : {
+          id: `${c.id}-fnd`, kind: "Befund", label: `Vorläufig: ${cmp.consensus}`, evidence: "ai",
+          details: [["Konsens der Modelle", cmp.consensus], ["Hinweis", "Noch keine Prüferentscheidung – unverbindlich"]],
+        },
+  ];
+}
+
+function generatedLane(c: GeneratedTestCase, cmp?: ResultComparison): TraceNode[] {
   const evidence = CASE_EVIDENCE[c.origin.kind];
   const open = c.expectedFields.filter((f) => f.value.includes(OPEN_VALUE_MARKER)).length;
   return [
@@ -124,8 +156,7 @@ function generatedLane(c: GeneratedTestCase): TraceNode[] {
       evidence,
       details: c.expectedFields.map((f) => [f.field, f.value] as [string, string]),
     },
-    { id: `${c.id}-obs`, kind: "Beobachtet", label: c.execution, evidence: "missing", details: [["Hinweis", "Für diesen Fall wurde kein Datensatz aus der Entgeltabrechnung importiert"]] },
-    { id: `${c.id}-fnd`, kind: "Befund", label: "Noch kein Befund", evidence: "missing", details: [["Hinweis", "Erfordert ein beobachtetes Ergebnis"]] },
+    ...observedNodes(c, cmp),
   ];
 }
 
@@ -172,10 +203,15 @@ function spineFor(req: Req): TraceNode[] {
   return [source, requirement, rule];
 }
 
-export function buildTraceGraph(req: Req, generated: GeneratedTestCase[]): TraceGraph {
+export function buildTraceGraph(req: Req, generated: GeneratedTestCase[], comparisons: ResultComparison[] = []): TraceGraph {
+  /** Latest comparison per test case. */
+  const latest = new Map<string, ResultComparison>();
+  for (const cmp of comparisons) latest.set(cmp.testCaseId, cmp);
   const lanes = [
     ...sampleCasesFor(req).map(sampleLane),
-    ...generated.filter((c) => c.requirementId === req.id && c.review.decision !== "Abgelehnt").map(generatedLane),
+    ...generated
+      .filter((c) => c.requirementId === req.id && c.review.decision !== "Abgelehnt")
+      .map((c) => generatedLane(c, latest.get(c.id))),
   ];
   return { spine: spineFor(req), lanes };
 }

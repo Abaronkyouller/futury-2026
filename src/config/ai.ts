@@ -8,6 +8,9 @@ const FALLBACK_AI_MODEL = "vllm/Kolibri-1";
 export const AI_MODEL =
   typeof __HAI_MODEL__ === "string" && __HAI_MODEL__.trim() ? __HAI_MODEL__.trim() : FALLBACK_AI_MODEL;
 
+/** The AI assessor on "Validierung & Bericht"; it is compared with the rule-based matcher. */
+export const COMPARE_MODEL = { label: "KI", model: AI_MODEL } as const;
+
 /** Abort a model call after this long; long German outputs can take a while. */
 export const AI_REQUEST_TIMEOUT_MS = 120_000;
 

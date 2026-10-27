@@ -10,6 +10,13 @@ const STATUS_CLASS: Record<string, "good" | "bad" | "warn"> = {
   "Prüfung nötig": "warn",
   "In Bearbeitung": "warn",
   "In Überprüfung": "warn",
+  // Validierung & Bericht
+  Übereinstimmung: "good",
+  Abweichung: "bad",
+  "Nicht bestanden": "bad",
+  "Nicht feststellbar": "warn",
+  Unklar: "warn",
+  Uneinig: "warn",
 };
 
 export function Status({ value }: { value: string }) {

@@ -7,6 +7,7 @@ import type {
   GenerationSettings,
   ReviewDecision,
 } from "../types/review";
+import type { ComparisonFeedback, ResultComparison } from "../types/validation";
 
 /** Persisted part of the review state (localStorage, this browser only). */
 export type ReviewState = {
@@ -15,6 +16,8 @@ export type ReviewState = {
   cases: GeneratedTestCase[];
   changelog: ChangeLogEntry[];
   settings: GenerationSettings;
+  /** Comparisons of imported payroll results with test cases (Validierung & Bericht). */
+  comparisons: ResultComparison[];
   /** Version marker for one-time migrations of persisted priority assignments. */
   priorityAssignmentVersion: number;
 };
@@ -33,6 +36,10 @@ export type ReviewStore = ReviewState & {
   reviewCase: (caseId: string, decision: ReviewDecision, comment: string) => void;
   /** Persists feedback before a replacement case is generated. */
   submitCaseFeedback: (caseId: string, comment: string) => void;
+  /** Stores one two-model comparison and logs it. */
+  addComparison: (comparison: ResultComparison) => void;
+  /** Records the examiner's binding verdict on a comparison; the previous value is logged. */
+  reviewComparison: (id: string, feedback: ComparisonFeedback) => void;
   /** Updates generation settings and logs what changed. */
   updateSettings: (next: GenerationSettings) => void;
   /** Removes all generated cases and feedback; the reset itself is logged. */

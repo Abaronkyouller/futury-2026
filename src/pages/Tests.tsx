@@ -23,6 +23,7 @@ const KIND_CLASS: Record<ChangeKind, string> = {
   Anforderung: "kind-req",
   Generierung: "kind-gen",
   Prüfung: "kind-review",
+  Validierung: "kind-validation",
   Einstellungen: "kind-settings",
   Zurücksetzen: "kind-reset",
 };

@@ -17,7 +17,8 @@ const UNTITLED_SECTION = "Dokumenttext (ohne Überschrift)";
 
 export type IngestProgress = { stage: string; done?: number; total?: number };
 
-function formatOf(name: string): DocFormat | null {
+/** File format by extension, or null if unsupported. */
+export function formatOf(name: string): DocFormat | null {
   const ext = name.toLowerCase().split(".").pop();
   if (ext === "pdf") return "pdf";
   if (ext === "docx") return "docx";
