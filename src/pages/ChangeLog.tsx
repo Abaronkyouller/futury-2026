@@ -314,7 +314,7 @@ export function ChangeLog() {
     <>
       <Header
         title="Änderungsprotokoll"
-        subtitle="Wie sich Regeln und Spezifikationen über die Zeit verändert haben – und wie sich die Testfälle verändert haben. Alle Einträge mit Zeitstempel; nichts wird stillschweigend überschrieben."
+        // subtitle="Wie sich Regeln und Spezifikationen über die Zeit verändert haben – und wie sich die Testfälle verändert haben. Alle Einträge mit Zeitstempel; nichts wird stillschweigend überschrieben."
         action={<button onClick={exportAll} disabled={!changelog.length}><Download size={15} /> Gesamtprotokoll (CSV)</button>}
       />
       <div className="viewswitch" role="tablist">
