@@ -25,7 +25,8 @@ function columnsFrom(template: ExpectedField[]): string[] {
  * Test datasets of one case, maintained by the examiner.
  * - Starts with no datasets; "+" asks how many to create, either with random
  *   values derived from the proposal (src/utils/randomTestData.ts) or empty.
- * - Every cell is editable; rows and columns can be added and deleted.
+ * - Every cell is editable; the examiner can add single empty datasets by hand,
+ *   delete datasets and remove columns.
  * - Every dataset is "Öffentlich" or "Privat"; private datasets are left out of the CSV.
  * - Export as CSV (UTF-8 with BOM so Excel shows umlauts correctly).
  * Adding/deleting is logged in the change log; cell edits are saved silently.
@@ -42,7 +43,6 @@ export function TestDataEditor({ item, template, canRandomize = true }: {
   const [count, setCount] = useState("1");
   const [prefillChoice, setPrefill] = useState(true);
   const prefill = canRandomize && prefillChoice;
-  const [newColumn, setNewColumn] = useState("");
   const [newPrivacy, setNewPrivacy] = useState<Privacy>("Öffentlich");
 
   const data: TestDatasets = item.datasets ?? { columns: columnsFrom(template), rows: [], updatedAt: "" };
@@ -74,12 +74,9 @@ export function TestDataEditor({ item, template, canRandomize = true }: {
       save({ columns, rows: [], rowPrivacy: [] }, `Alle ${rows.length} Datensätze gelöscht`);
     }
   };
-  const addColumn = () => {
-    const name = newColumn.trim();
-    if (!name || columns.includes(name)) return;
-    save({ columns: [...columns, name], rows: rows.map((row) => [...row, ""]), rowPrivacy: privacies }, `Spalte „${name}“ hinzugefügt`);
-    setNewColumn("");
-  };
+  /** Adds one empty dataset that the examiner fills in by hand. */
+  const addRow = () =>
+    save({ columns, rows: [...rows, columns.map(() => "")], rowPrivacy: [...privacies, "Öffentlich"] }, "1 Datensatz manuell hinzugefügt");
   const deleteColumn = async (c: number) => {
     const filled = rows.some((row) => row[c]?.trim());
     if (filled && !(await confirm({ title: `Spalte „${columns[c]}“ löschen?`, message: "Die Werte dieser Spalte gehen in allen Datensätzen verloren.", confirmLabel: "Spalte löschen" }))) return;
@@ -173,10 +170,11 @@ export function TestDataEditor({ item, template, canRandomize = true }: {
             </tbody>
           </table>
           </div>
-          <div className="testdatacol">
-            <input placeholder="Neue Spalte, z. B. Arbeitsentgelt" value={newColumn} onChange={(e) => setNewColumn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addColumn(); }} />
-            <button onClick={addColumn} disabled={!newColumn.trim() || columns.includes(newColumn.trim())}><Plus size={14} /> Spalte</button>
-          </div>
+        </div>
+      )}
+      {canRandomize && (
+        <div className="testdataaddrow">
+          <button onClick={addRow} title="Leeren Datensatz anlegen und selbst ausfüllen"><Plus size={14} /> Datensatz selbst hinzufügen</button>
         </div>
       )}
     </div>
