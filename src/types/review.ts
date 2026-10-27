@@ -45,9 +45,18 @@ export type ExpectedField = { field: string; value: string };
  * dataset, one column per field). Kept apart from the generated proposal in
  * `testData`, so model output and examiner input stay distinguishable.
  */
+/**
+ * Visibility of an examiner test dataset. Private datasets stay in the app but
+ * are left out of every PDF and CSV export; only public datasets are exported.
+ */
+export const PRIVACY_LEVELS = ["Öffentlich", "Privat"] as const;
+export type Privacy = (typeof PRIVACY_LEVELS)[number];
+
 export type TestDatasets = {
   columns: string[];
   rows: string[][];
+  /** Visibility per row (same order as `rows`); missing entries are public. */
+  rowPrivacy?: Privacy[];
   updatedAt: string; // ISO timestamp
 };
 

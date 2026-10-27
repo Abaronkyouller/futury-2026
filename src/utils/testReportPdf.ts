@@ -3,6 +3,7 @@ import type { GeneratedTestCase } from "../types/review";
 import type { TestReport } from "../types/testReport";
 import type { ResultComparison } from "../types/validation";
 import { caseHtml, escapeHtml } from "./testCasePdf";
+import { PRIVACY_EXPORT_NOTE, publicRows } from "./privacy";
 import { caseOutcome, countOutcomes, latestComparisons } from "./testOutcome";
 
 /** Theme tokens copied into the print window, so the report uses the colours of theme.css (no literals here). */
@@ -17,8 +18,10 @@ const fmt = (iso: string) => new Intl.DateTimeFormat("de-DE", { dateStyle: "medi
 /** Examiner datasets of a case as a table (empty string when there are none). */
 function datasetsHtml(item: GeneratedTestCase): string {
   const d = item.datasets;
-  if (!d?.rows.length) return "";
-  return `<section><h3>Testdatensätze (vom Prüfer gepflegt)</h3><table class="grid"><thead><tr><th>Nr.</th>${d.columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${d.rows
+  // Only public datasets are exported.
+  const rows = d ? publicRows(d) : [];
+  if (!d || !rows.length) return "";
+  return `<section><h3>Testdatensätze (vom Prüfer gepflegt)</h3><table class="grid"><thead><tr><th>Nr.</th>${d.columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${rows
     .map((row, i) => `<tr><td>${i + 1}</td>${d.columns.map((_, j) => `<td>${escapeHtml(row[j] ?? "")}</td>`).join("")}</tr>`)
     .join("")}</tbody></table></section>`;
 }
@@ -86,6 +89,7 @@ export function printTestReport(report: TestReport, cases: GeneratedTestCase[], 
       <div><b class="bad">${counts["Test fehlgeschlagen"]}</b>Test fehlgeschlagen</div>
       <div><b>${counts["Test noch nicht durchgeführt"]}</b>Test noch nicht durchgeführt</div>
     </div>
+    <p class="note">${escapeHtml(PRIVACY_EXPORT_NOTE)}</p>
     <p class="note">Das Ergebnis je Testfall hat der Prüfer für diese Software gesetzt („manuell gesetzt“) oder es stammt aus der Prüferentscheidung im Abgleich unter „Validierung &amp; Bericht“. Ohne beides gilt der Test als noch nicht durchgeführt. Testfälle sind Vorschläge des Prüfassistenten und ersetzen keine fachliche Prüfung.</p>
     <h3>Übersicht der Testfälle</h3>
     <table class="overview"><thead><tr><th>ID</th><th>Titel</th><th>Anforderung</th><th>Priorität</th><th>Prüfstatus</th><th>Ergebnis</th></tr></thead><tbody>${overview || `<tr><td colspan="6">Keine Testfälle zugeordnet.</td></tr>`}</tbody></table>

@@ -191,7 +191,10 @@ export function GeneratedCaseCard({
           <FieldTable rows={testData} />
         </>
       )}
-      <TestDataEditor item={item} template={dataInfo.available ? testData : []} canRandomize={dataInfo.available} />
+      {/* Cases that cannot have test data get no dataset editor; datasets created earlier stay visible. */}
+      {(dataInfo.available || (item.datasets?.rows.length ?? 0) > 0) && (
+        <TestDataEditor item={item} template={dataInfo.available ? testData : []} canRandomize={dataInfo.available} />
+      )}
 
       {item.steps.length > 0 && (
         <>
