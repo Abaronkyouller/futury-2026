@@ -22,7 +22,7 @@ export function Validation() {
       <div className="validationtop">
         <label className="upload">
           <Upload size={24} />
-          <b>Datensätze aus der Entgeltabrechnung hochladen</b>
+          <b>Datensätze hochladen</b>
           <span>{file ? `${file} – Auswertung noch nicht angebunden` : "Dateien hierher ziehen oder auswählen · wird lokal verarbeitet"}</span>
           <input type="file" onChange={(e) => setFile(e.target.files?.[0]?.name || "")} />
         </label>
