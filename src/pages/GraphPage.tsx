@@ -133,10 +133,9 @@ export function GraphPage() {
             <p className="muted">Noch keine Testfälle zu dieser Anforderung. Erzeugen Sie sie unter <Link to="/documents">Testfall-Generator</Link>.</p>
           ) : (
             <>
-              <p className="muted">
-                Klicken Sie auf einen Testfall, um zu sehen, wie er entstanden ist. Die Abschnitte 1 bis 6 lassen sich einzeln auf- und zuklappen.
+              {/* <p className="muted">
                 {hiddenRejected > 0 && ` ${hiddenRejected} abgelehnte(r) Testfall/Testfälle sind ausgeblendet.`}
-              </p>
+              </p> */}
               <div className="tracecases">
                 {traceCases.map(({ id, testCase }) => (
                   <CaseTraceSection
