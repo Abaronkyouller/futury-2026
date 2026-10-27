@@ -9,6 +9,9 @@ import { useReviewStore } from "../state/reviewContext";
 import { PRIORITIES } from "../types/review";
 import type { Priority } from "../types/review";
 import { printTestCasesAsPdf } from "../utils/testCasePdf";
+import { TEST_OUTCOMES } from "../types/testReport";
+import type { TestOutcome } from "../types/testReport";
+import { comparisonOutcome, latestComparisons } from "../utils/testOutcome";
 
 const REVIEW_FILTERS = ["Alle", "Offen", "Akzeptiert", "Abgelehnt"] as const;
 type ReviewFilter = (typeof REVIEW_FILTERS)[number];
@@ -17,7 +20,9 @@ const TESTS_PER_PAGE = 10;
 
 /** Paginated test plan with collapsible details and filters. */
 export function Tests() {
-  const { cases, requirements } = useReviewStore();
+  const { cases, requirements, comparisons } = useReviewStore();
+  const [outcomeFilter, setOutcomeFilter] = useState<"Alle" | TestOutcome>("Alle");
+  const latest = latestComparisons(comparisons);
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("Alle");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("Alle");
   const [sourceFilter, setSourceFilter] = useState("Alle");
@@ -36,6 +41,7 @@ export function Tests() {
     .filter((item) => reviewFilter === "Alle" || item.review.decision === reviewFilter)
     .filter((item) => priorityFilter === "Alle" || item.priority === priorityFilter)
     .filter((item) => sourceFilter === "Alle" || sourceOf(item.requirementId) === sourceFilter)
+    .filter((item) => outcomeFilter === "Alle" || comparisonOutcome(latest.get(item.id)) === outcomeFilter)
     .filter((item) => !normalizedQuery || [item.id, item.requirementId, item.title, item.technique, sourceOf(item.requirementId)]
       .some((value) => value.toLocaleLowerCase("de-DE").includes(normalizedQuery)))
     .sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.id.localeCompare(b.id));
@@ -78,8 +84,14 @@ export function Tests() {
               {sources.map((source) => <option key={source}>{source}</option>)}
             </select>
           </label>
+          <label className="field inline">Ergebnis
+            <select value={outcomeFilter} onChange={(e) => { setOutcomeFilter(e.target.value as "Alle" | TestOutcome); resetPage(); }}>
+              <option>Alle</option>
+              {TEST_OUTCOMES.map((o) => <option key={o}>{o}</option>)}
+            </select>
+          </label>
           <span className="muted small">{filtered.length} von {cases.length} Testfall/Testfällen</span>
-          {(query || priorityFilter !== "Alle" || reviewFilter !== "Alle" || sourceFilter !== "Alle") && <button onClick={() => { setQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); setSourceFilter("Alle"); resetPage(); }}>Filter zurücksetzen</button>}
+          {(query || priorityFilter !== "Alle" || reviewFilter !== "Alle" || sourceFilter !== "Alle" || outcomeFilter !== "Alle") && <button onClick={() => { setQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); setSourceFilter("Alle"); setOutcomeFilter("Alle"); resetPage(); }}>Filter zurücksetzen</button>}
         </div>
 
         {filtered.length === 0 ? <p className="muted">Keine Testfälle entsprechen den gewählten Filtern.</p> : <div className="casegroup">

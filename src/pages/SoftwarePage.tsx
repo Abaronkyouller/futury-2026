@@ -7,14 +7,16 @@ import { Pager } from "../components/Pager";
 import { Status } from "../components/Status";
 import { useReviewStore } from "../state/reviewContext";
 import { useConfirm } from "../state/confirmContext";
-import type { TestReport } from "../types/testReport";
+import { TEST_OUTCOMES } from "../types/testReport";
+import type { TestOutcome, TestReport } from "../types/testReport";
 import { sanitizeCaseTitle } from "../utils/caseText";
 import { formatDateTime, toCsv } from "../utils/format";
 import { download } from "../utils/download";
-import { caseResult, latestComparisons, printTestReport } from "../utils/testReportPdf";
+import { printTestReport } from "../utils/testReportPdf";
+import { caseOutcome, countOutcomes, latestComparisons, OUTCOME_CLASS } from "../utils/testOutcome";
 
-const RESULT_FILTERS = ["Alle", "Mit Abweichungen", "Alle bestanden", "Noch offen"] as const;
-type ResultFilter = (typeof RESULT_FILTERS)[number];
+/** "Ergebnis" filter: software that has at least one test case with this result. */
+type ResultFilter = "Alle" | TestOutcome;
 const PER_PAGE = 10;
 
 /**
@@ -37,10 +39,9 @@ export function SoftwarePage() {
   const caseById = new Map(cases.map((c) => [c.id, c]));
   const summary = (r: TestReport) => {
     const own = r.caseIds.map((id) => caseById.get(id)).filter((c): c is NonNullable<typeof c> => Boolean(c));
-    const results = own.map((c) => caseResult(latest.get(c.id)));
-    const passed = results.filter((x) => x.binding && x.label === "Bestanden").length;
-    const failed = results.filter((x) => x.binding && x.label === "Nicht bestanden").length;
-    return { own, results, passed, failed, pending: own.length - passed - failed };
+    const results = own.map((c) => caseOutcome(c.id, r.outcomes, latest));
+    const counts = countOutcomes(results.map((x) => x.outcome));
+    return { own, results, counts };
   };
   const names = (pick: (r: TestReport) => string) => [...new Set(testReports.map(pick).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
   const vendors = names((r) => r.vendor);
@@ -53,10 +54,7 @@ export function SoftwarePage() {
     .filter((r) => examiner === "Alle" || r.examiner === examiner)
     .filter((r) => {
       if (resultFilter === "Alle") return true;
-      const s = summary(r);
-      if (resultFilter === "Mit Abweichungen") return s.failed > 0;
-      if (resultFilter === "Alle bestanden") return s.own.length > 0 && s.passed === s.own.length;
-      return s.pending > 0;
+      return summary(r).counts[resultFilter] > 0;
     })
     .filter((r) => {
       const hay = [r.software, r.id, r.vendor, r.examiner, ...r.caseIds].join(" ").toLocaleLowerCase("de-DE");
@@ -75,8 +73,8 @@ export function SoftwarePage() {
     if (await confirm({ title: "Software löschen?", message: `„${r.software}“ (ID ${r.id}) und die Zuordnung der Testfälle werden gelöscht. Die Testfälle selbst bleiben erhalten.`, confirmLabel: "Löschen" })) deleteTestReport(r.id);
   };
   const exportCsv = () => download("software.csv", "﻿" + toCsv([
-    ["ID", "Software", "Hersteller", "Prüfer/in", "Testfälle", "Bestanden", "Nicht bestanden", "Offen", "Angelegt", "Gespeichert"],
-    ...filtered.map((r) => { const s = summary(r); return [r.id, r.software, r.vendor, r.examiner, String(s.own.length), String(s.passed), String(s.failed), String(s.pending), formatDateTime(r.createdAt), formatDateTime(r.updatedAt)]; }),
+    ["ID", "Software", "Hersteller", "Prüfer/in", "Testfälle", ...TEST_OUTCOMES, "Angelegt", "Gespeichert"],
+    ...filtered.map((r) => { const s = summary(r); return [r.id, r.software, r.vendor, r.examiner, String(s.own.length), ...TEST_OUTCOMES.map((o) => String(s.counts[o])), formatDateTime(r.createdAt), formatDateTime(r.updatedAt)]; }),
   ]));
 
   return (
@@ -110,7 +108,8 @@ export function SoftwarePage() {
               </label>
               <label className="field inline">Ergebnis
                 <select value={resultFilter} onChange={(e) => { setResultFilter(e.target.value as ResultFilter); setPage(1); }}>
-                  {RESULT_FILTERS.map((v) => <option key={v}>{v}</option>)}
+                  <option>Alle</option>
+                  {TEST_OUTCOMES.map((v) => <option key={v} value={v}>enthält: {v}</option>)}
                 </select>
               </label>
               <span className="muted small">{filtered.length} von {testReports.length} Software</span>
@@ -145,9 +144,7 @@ export function SoftwarePage() {
                               <td>{s.own.length}</td>
                               <td>
                                 <div className="tags">
-                                  {s.passed > 0 && <span className="status good">{s.passed} bestanden</span>}
-                                  {s.failed > 0 && <span className="status bad">{s.failed} nicht bestanden</span>}
-                                  {s.pending > 0 && <span className="status neutral">{s.pending} offen</span>}
+                                  {TEST_OUTCOMES.filter((o) => s.counts[o] > 0).map((o) => <span key={o} className={`status ${OUTCOME_CLASS[o]}`}>{s.counts[o]} {o}</span>)}
                                   {s.own.length === 0 && <span className="muted small">keine Testfälle</span>}
                                 </div>
                               </td>
@@ -170,7 +167,7 @@ export function SoftwarePage() {
                                         <li key={c.id}>
                                           <code>{c.id}</code> {sanitizeCaseTitle(c.title) || c.technique}
                                           <Status value={c.review.decision} />
-                                          <span className={s.results[i].binding ? "" : "muted"}>{s.results[i].label}</span>
+                                          <span className={`status ${OUTCOME_CLASS[s.results[i].outcome]}`}>{s.results[i].outcome}</span>{s.results[i].source === "manuell" && <small className="muted">manuell gesetzt</small>}
                                         </li>
                                       ))}
                                     </ul>

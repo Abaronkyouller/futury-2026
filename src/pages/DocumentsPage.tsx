@@ -20,6 +20,9 @@ import type { GeneratedTestCase, Priority } from "../types/review";
 import { PRIORITIES } from "../types/review";
 import { detectRuleChanges } from "../changes/ruleDiff";
 import { useConfirm } from "../state/confirmContext";
+import { TEST_OUTCOMES } from "../types/testReport";
+import type { TestOutcome } from "../types/testReport";
+import { comparisonOutcome, latestComparisons } from "../utils/testOutcome";
 
 const KIND_HINT: Record<DocKind, string> = {
   Fachlich: "Rechtliche/fachliche Vorgaben",
@@ -175,6 +178,8 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   const [showReasoning, setShowReasoning] = useState(true);
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("Alle");
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("Alle");
+  const [outcomeFilter, setOutcomeFilter] = useState<"Alle" | TestOutcome>("Alle");
+  const latest = latestComparisons(store.comparisons);
   const [caseSort, setCaseSort] = useState<CaseSort>("Priorität");
   /** Writable filter; only the first matching source section is visible. */
   const [sectionQuery, setSectionQuery] = useState("");
@@ -185,6 +190,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   const filteredCases = docCases
     .filter((c) => priorityFilter === "Alle" || c.priority === priorityFilter)
     .filter((c) => reviewFilter === "Alle" || c.review.decision === reviewFilter)
+    .filter((c) => outcomeFilter === "Alle" || comparisonOutcome(latest.get(c.id)) === outcomeFilter)
     .sort((a, b) => {
       const priorityOrder = PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority);
       if (caseSort === "Priorität") return priorityOrder || b.origin.generatedAt.localeCompare(a.origin.generatedAt);
@@ -192,7 +198,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
       return openOrder || priorityOrder || b.origin.generatedAt.localeCompare(a.origin.generatedAt);
     });
   const activeCases = filteredCases.filter((c) => (sectionByReq.get(c.requirementId) ?? NO_SECTION) === activeSection);
-  const hasFilters = Boolean(sectionQuery) || priorityFilter !== "Alle" || reviewFilter !== "Alle" || caseSort !== "Priorität";
+  const hasFilters = Boolean(sectionQuery) || priorityFilter !== "Alle" || reviewFilter !== "Alle" || outcomeFilter !== "Alle" || caseSort !== "Priorität";
 
   async function extractAll(): Promise<Req[]> {
     const extracted: Req[] = [];
@@ -293,6 +299,12 @@ function Workspace({ doc }: { doc: SourceDocument }) {
               {REVIEW_FILTERS.map((status) => <option key={status}>{status}</option>)}
             </select>
           </label>
+          <label className="field inline">Ergebnis
+            <select value={outcomeFilter} onChange={(e) => { setOutcomeFilter(e.target.value as "Alle" | TestOutcome); }}>
+              <option>Alle</option>
+              {TEST_OUTCOMES.map((o) => <option key={o}>{o}</option>)}
+            </select>
+          </label>
           <label className="field inline">Sortierung
             <select value={caseSort} onChange={(e) => setCaseSort(e.target.value as CaseSort)}>
               <option>Priorität</option>
@@ -302,7 +314,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
         </div>
         <div className="docmeta">
           <span className="muted small">{sourceSections.length} Abschnitt(e) der Quelle · {filteredCases.length} von {docCases.length} Testfall/Testfällen</span>
-          {hasFilters && <button onClick={() => { setSectionQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); setCaseSort("Priorität"); }}>Filter zurücksetzen</button>}
+          {hasFilters && <button onClick={() => { setSectionQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); setOutcomeFilter("Alle"); setCaseSort("Priorität"); }}>Filter zurücksetzen</button>}
         </div>
         {activeSection && activeCases.length > 0
           ? <div className="casegroups"><SectionGroup key={activeSection} label={activeSection} cases={activeCases} showReasoning={showReasoning} /></div>

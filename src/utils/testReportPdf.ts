@@ -3,24 +3,7 @@ import type { GeneratedTestCase } from "../types/review";
 import type { TestReport } from "../types/testReport";
 import type { ResultComparison } from "../types/validation";
 import { caseHtml, escapeHtml } from "./testCasePdf";
-
-/**
- * Result of a case for the report: the examiner's verdict of the latest
- * comparison is binding; a model consensus without verdict is marked as
- * provisional; without a comparison the case was not executed.
- */
-export function caseResult(cmp: ResultComparison | undefined): { label: string; binding: boolean } {
-  if (!cmp) return { label: "Nicht ausgeführt", binding: false };
-  if (cmp.feedback) return { label: cmp.feedback.verdict, binding: true };
-  return { label: `Vorläufig: ${cmp.consensus}`, binding: false };
-}
-
-/** Latest comparison per test case. */
-export function latestComparisons(comparisons: ResultComparison[]): Map<string, ResultComparison> {
-  const latest = new Map<string, ResultComparison>();
-  for (const cmp of comparisons) latest.set(cmp.testCaseId, cmp);
-  return latest;
-}
+import { caseOutcome, countOutcomes, latestComparisons } from "./testOutcome";
 
 /** Theme tokens copied into the print window, so the report uses the colours of theme.css (no literals here). */
 const PRINT_TOKENS = ["--accent", "--text", "--missing", "--surface-2", "--good", "--bad", "--muted"];
@@ -50,10 +33,10 @@ export function printTestReport(report: TestReport, cases: GeneratedTestCase[], 
   win.opener = null;
   const reqs = new Map(requirements.map((r) => [r.id, r]));
   const latest = latestComparisons(comparisons);
-  const results = cases.map((c) => caseResult(latest.get(c.id)));
-  const count = (label: string) => results.filter((r) => r.binding && r.label === label).length;
-  const provisional = results.filter((r) => !r.binding && r.label !== "Nicht ausgeführt").length;
-  const notRun = results.filter((r) => r.label === "Nicht ausgeführt").length;
+  // Saved result per case: the examiner's setting for this software, else the comparison.
+  const results = cases.map((c) => caseOutcome(c.id, report.outcomes, latest));
+  const counts = countOutcomes(results.map((r) => r.outcome));
+  const cls = (o: string) => (o === "Test erfolgreich" ? "ok" : o === "Test fehlgeschlagen" ? "bad" : "muted");
   const meta: [string, string][] = [
     ["Software", report.software],
     ["ID", report.id],
@@ -65,7 +48,7 @@ export function printTestReport(report: TestReport, cases: GeneratedTestCase[], 
   ];
   const overview = cases.map((c, i) => {
     const r = results[i];
-    return `<tr><td class="mono">${escapeHtml(c.id)}</td><td>${escapeHtml(c.title || c.technique || "–")}</td><td>${escapeHtml(c.requirementId)}</td><td>${escapeHtml(c.priority)}</td><td>${escapeHtml(c.review.decision)}</td><td class="${r.binding ? (r.label === "Bestanden" ? "ok" : r.label === "Nicht bestanden" ? "bad" : "") : "muted"}">${escapeHtml(r.label)}</td></tr>`;
+    return `<tr><td class="mono">${escapeHtml(c.id)}</td><td>${escapeHtml(c.title || c.technique || "–")}</td><td>${escapeHtml(c.requirementId)}</td><td>${escapeHtml(c.priority)}</td><td>${escapeHtml(c.review.decision)}</td><td class="${cls(r.outcome)}">${escapeHtml(r.outcome)}<br><span class="muted">${r.source === "manuell" ? "manuell gesetzt" : r.source === "Abgleich" ? "aus dem Abgleich" : "kein Abgleich"}</span></td></tr>`;
   }).join("");
 
   win.document.write(`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Testbericht ${escapeHtml(report.software)} ${escapeHtml(report.id)}</title><style>
@@ -84,7 +67,7 @@ export function printTestReport(report: TestReport, cases: GeneratedTestCase[], 
     blockquote { border-left: 3px solid currentColor; margin: 2mm 0; padding: 2mm 4mm; }
     table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid var(--missing); padding: 1.8mm 2mm; text-align: left; vertical-align: top; }
     article th { width: 36%; } table.grid th, table.overview th { width: auto; background: var(--surface-2); }
-    .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3mm; margin: 3mm 0 5mm; }
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 3mm 0 5mm; }
     .summary div { border: 1px solid var(--missing); border-radius: 2mm; padding: 2.5mm; } .summary b { display: block; font-size: 16pt; }
     .ok { color: var(--good); font-weight: bold; } .bad { color: var(--bad); font-weight: bold; } .muted { color: var(--muted); }
     .note { font-size: 9pt; color: var(--muted); }
@@ -99,15 +82,14 @@ export function printTestReport(report: TestReport, cases: GeneratedTestCase[], 
     <h3>Zusammenfassung</h3>
     <div class="summary">
       <div><b>${cases.length}</b>Testfälle zugeordnet</div>
-      <div><b class="ok">${count("Bestanden")}</b>bestanden</div>
-      <div><b class="bad">${count("Nicht bestanden")}</b>nicht bestanden</div>
-      <div><b>${count("Unklar") + provisional}</b>unklar / vorläufig</div>
-      <div><b>${notRun}</b>nicht ausgeführt</div>
+      <div><b class="ok">${counts["Test erfolgreich"]}</b>Test erfolgreich</div>
+      <div><b class="bad">${counts["Test fehlgeschlagen"]}</b>Test fehlgeschlagen</div>
+      <div><b>${counts["Test noch nicht durchgeführt"]}</b>Test noch nicht durchgeführt</div>
     </div>
-    <p class="note">Ergebnisse stammen aus dem Abgleich unter „Validierung &amp; Bericht“. Verbindlich ist nur die Prüferentscheidung; Einschätzungen der KI und des regelbasierten Abgleichs ohne Prüferentscheidung sind als „vorläufig“ gekennzeichnet. Testfälle sind Vorschläge des Prüfassistenten und ersetzen keine fachliche Prüfung.</p>
+    <p class="note">Das Ergebnis je Testfall hat der Prüfer für diese Software gesetzt („manuell gesetzt“) oder es stammt aus der Prüferentscheidung im Abgleich unter „Validierung &amp; Bericht“. Ohne beides gilt der Test als noch nicht durchgeführt. Testfälle sind Vorschläge des Prüfassistenten und ersetzen keine fachliche Prüfung.</p>
     <h3>Übersicht der Testfälle</h3>
     <table class="overview"><thead><tr><th>ID</th><th>Titel</th><th>Anforderung</th><th>Priorität</th><th>Prüfstatus</th><th>Ergebnis</th></tr></thead><tbody>${overview || `<tr><td colspan="6">Keine Testfälle zugeordnet.</td></tr>`}</tbody></table>
-    ${cases.map((c) => caseHtml(c, reqs.get(c.requirementId)).replace(/<\/article>\s*$/, `${datasetsHtml(c)}<section><h3>Ergebnis</h3><p>${escapeHtml(caseResult(latest.get(c.id)).label)}</p></section></article>`)).join("")}
+    ${cases.map((c) => caseHtml(c, reqs.get(c.requirementId)).replace(/<\/article>\s*$/, `${datasetsHtml(c)}<section><h3>Ergebnis</h3><p>${escapeHtml(caseOutcome(c.id, report.outcomes, latest).outcome)}</p></section></article>`)).join("")}
   </body></html>`);
   win.document.close();
   win.focus();

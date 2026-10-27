@@ -10,10 +10,12 @@ import { useReviewStore } from "../state/reviewContext";
 import { useConfirm } from "../state/confirmContext";
 import { PRIORITIES } from "../types/review";
 import type { Priority } from "../types/review";
-import type { TestReport } from "../types/testReport";
+import { TEST_OUTCOMES } from "../types/testReport";
+import type { TestOutcome, TestReport } from "../types/testReport";
 import { sanitizeCaseTitle } from "../utils/caseText";
 import { formatDateTime } from "../utils/format";
-import { caseResult, latestComparisons, printTestReport } from "../utils/testReportPdf";
+import { printTestReport } from "../utils/testReportPdf";
+import { caseOutcome, comparisonOutcome, countOutcomes, latestComparisons, OUTCOME_CLASS } from "../utils/testOutcome";
 
 const REVIEW_FILTERS = ["Alle", "Offen", "Akzeptiert", "Abgelehnt"] as const;
 type ReviewFilter = (typeof REVIEW_FILTERS)[number];
@@ -22,8 +24,13 @@ type AssignFilter = (typeof ASSIGN_FILTERS)[number];
 const CASES_PER_PAGE = 10;
 
 /** Editable state of the form; it reaches the store (and the PDF) only via "Speichern". */
-type Draft = Pick<TestReport, "software" | "vendor" | "examiner" | "caseIds">;
-const EMPTY_DRAFT: Draft = { software: "", vendor: "", examiner: "", caseIds: [] };
+type Draft = Pick<TestReport, "software" | "vendor" | "examiner" | "caseIds"> & { outcomes: Record<string, TestOutcome> };
+const EMPTY_DRAFT: Draft = { software: "", vendor: "", examiner: "", caseIds: [], outcomes: {} };
+type OutcomeFilter = "Alle" | TestOutcome;
+
+/** Same manual results regardless of key order. */
+const sameOutcomes = (a: Record<string, TestOutcome>, b: Record<string, TestOutcome> = {}) =>
+  Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([k, v]) => b[k] === v);
 
 const pad = (n: number) => String(n).padStart(2, "0");
 /** Report ID from the local save time: YYYYMMDDHHMMSS (suffix -2, -3 … if taken). */
@@ -62,15 +69,16 @@ export function TestReportPage() {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("Alle");
   const [sourceFilter, setSourceFilter] = useState("Alle");
   const [assignFilter, setAssignFilter] = useState<AssignFilter>("Alle");
+  const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>("Alle");
   const [page, setPage] = useState(1);
 
   // The form shows the selected report; switching reports loads its saved state.
   if ((report?.id ?? "neu") !== (draftFor ?? "neu")) {
     setDraftFor(report?.id);
-    setDraft(report ? { software: report.software, vendor: report.vendor, examiner: report.examiner, caseIds: report.caseIds } : EMPTY_DRAFT);
+    setDraft(report ? { software: report.software, vendor: report.vendor, examiner: report.examiner, caseIds: report.caseIds, outcomes: report.outcomes ?? {} } : EMPTY_DRAFT);
   }
   const dirty = report
-    ? (["software", "vendor", "examiner"] as const).some((k) => draft[k].trim() !== report[k]) || !sameIds(draft.caseIds, report.caseIds)
+    ? (["software", "vendor", "examiner"] as const).some((k) => draft[k].trim() !== report[k]) || !sameIds(draft.caseIds, report.caseIds) || !sameOutcomes(draft.outcomes, report.outcomes)
     : Boolean(draft.software.trim() || draft.vendor.trim() || draft.examiner.trim() || draft.caseIds.length);
 
   const reqById = new Map(requirements.map((r) => [r.id, r]));
@@ -87,29 +95,39 @@ export function TestReportPage() {
     .filter((c) => reviewFilter === "Alle" || c.review.decision === reviewFilter)
     .filter((c) => sourceFilter === "Alle" || sourceOf(c.requirementId) === sourceFilter)
     .filter((c) => assignFilter === "Alle" || (assignFilter === "Zugeordnet") === assigned.has(c.id))
+    .filter((c) => outcomeFilter === "Alle" || caseOutcome(c.id, draft.outcomes, latest).outcome === outcomeFilter)
     .filter((c) => !q || [c.id, c.requirementId, c.title, c.technique, sourceOf(c.requirementId)].some((v) => v.toLocaleLowerCase("de-DE").includes(q)))
     .sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.id.localeCompare(b.id));
   const pageCount = Math.max(1, Math.ceil(filtered.length / CASES_PER_PAGE));
   const currentPage = Math.min(page, pageCount);
   const shown = filtered.slice((currentPage - 1) * CASES_PER_PAGE, currentPage * CASES_PER_PAGE);
-  const filtersActive = query || priorityFilter !== "Alle" || reviewFilter !== "Alle" || sourceFilter !== "Alle" || assignFilter !== "Alle";
-  const resetFilters = () => { setQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); setSourceFilter("Alle"); setAssignFilter("Alle"); setPage(1); };
+  const filtersActive = query || priorityFilter !== "Alle" || reviewFilter !== "Alle" || sourceFilter !== "Alle" || assignFilter !== "Alle" || outcomeFilter !== "Alle";
+  const resetFilters = () => { setQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); setSourceFilter("Alle"); setAssignFilter("Alle"); setOutcomeFilter("Alle"); setPage(1); };
 
   // Assigned cases that still exist (cases can be removed by "Testfälle zurücksetzen").
   const existing = (ids: string[]) => ids.map((id) => cases.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => Boolean(c));
   const draftCases = existing(draft.caseIds);
   const savedCases = existing(report?.caseIds ?? []);
   const missing = draft.caseIds.length - draftCases.length;
-  const results = draftCases.map((c) => caseResult(latest.get(c.id)));
-  const passed = results.filter((r) => r.binding && r.label === "Bestanden").length;
-  const failed = results.filter((r) => r.binding && r.label === "Nicht bestanden").length;
-  const notRun = results.filter((r) => r.label === "Nicht ausgeführt").length;
+  const counts = countOutcomes(draftCases.map((c) => caseOutcome(c.id, draft.outcomes, latest).outcome));
 
   const setAssignment = (ids: string[], on: boolean) => {
     // Called only from a single checkbox – the selection is exactly what the examiner ticked.
     const change = ids.filter((id) => assigned.has(id) !== on);
     if (!change.length) return;
-    setDraft((d) => ({ ...d, caseIds: on ? [...d.caseIds, ...change] : d.caseIds.filter((id) => !change.includes(id)) }));
+    setDraft((d) => {
+      // Removing a case also drops its manual result.
+      const outcomes = on ? d.outcomes : Object.fromEntries(Object.entries(d.outcomes).filter(([id]) => !change.includes(id)));
+      return { ...d, caseIds: on ? [...d.caseIds, ...change] : d.caseIds.filter((id) => !change.includes(id)), outcomes };
+    });
+    setNotice("");
+  };
+  /** Sets the result of an assigned case for this software; the value from the comparison removes the manual entry. */
+  const setOutcome = (caseId: string, outcome: TestOutcome) => {
+    setDraft((d) => {
+      const rest = Object.fromEntries(Object.entries(d.outcomes).filter(([id]) => id !== caseId));
+      return { ...d, outcomes: outcome === comparisonOutcome(latest.get(caseId)) ? rest : { ...rest, [caseId]: outcome } };
+    });
     setNotice("");
   };
   const save = () => {
@@ -125,7 +143,8 @@ export function TestReportPage() {
     if (report) {
       const added = d.caseIds.filter((id) => !report.caseIds.includes(id)).length;
       const removed = report.caseIds.filter((id) => !d.caseIds.includes(id)).length;
-      saveTestReport({ ...report, ...d }, `gespeichert (${d.caseIds.length} Testfälle${added ? `, +${added}` : ""}${removed ? `, −${removed}` : ""})`);
+      const manual = Object.keys(d.outcomes).length;
+      saveTestReport({ ...report, ...d }, `gespeichert (${d.caseIds.length} Testfälle${added ? `, +${added}` : ""}${removed ? `, −${removed}` : ""}${manual ? `, ${manual} Ergebnis(se) manuell gesetzt` : ""})`);
       setNotice(`Gespeichert: ${d.caseIds.length} Testfall/Testfälle.`);
     } else {
       const id = reportId(testReports.map((r) => r.id));
@@ -206,9 +225,9 @@ export function TestReportPage() {
 
             <div className="tags">
               <span className="status neutral">{draftCases.length} zugeordnet</span>
-              <span className="status good">{passed} bestanden</span>
-              <span className="status bad">{failed} nicht bestanden</span>
-              <span className="status neutral">{notRun} nicht ausgeführt</span>
+              <span className="status good">{counts["Test erfolgreich"]} Test erfolgreich</span>
+              <span className="status bad">{counts["Test fehlgeschlagen"]} Test fehlgeschlagen</span>
+              <span className="status neutral">{counts["Test noch nicht durchgeführt"]} Test noch nicht durchgeführt</span>
             </div>
           )}
         </div>
@@ -244,10 +263,16 @@ export function TestReportPage() {
                   {ASSIGN_FILTERS.map((s) => <option key={s}>{s}</option>)}
                 </select>
               </label>
+              <label className="field inline">Ergebnis
+                <select value={outcomeFilter} onChange={(e) => { setOutcomeFilter(e.target.value as OutcomeFilter); setPage(1); }}>
+                  <option>Alle</option>
+                  {TEST_OUTCOMES.map((o) => <option key={o}>{o}</option>)}
+                </select>
+              </label>
               <span className="muted small">{filtered.length} von {cases.length} Testfall/Testfällen</span>
               {filtersActive && <button onClick={resetFilters}>Filter zurücksetzen</button>}
             </div>
-            <p className="muted small">Zugeordnet werden nur die Testfälle, deren Kästchen Sie selbst ankreuzen. Filter ändern nur die Ansicht, nicht die Auswahl.</p>
+            <p className="muted small">Zugeordnet werden nur die Testfälle, deren Kästchen Sie selbst ankreuzen. Filter ändern nur die Ansicht, nicht die Auswahl. Das Ergebnis lässt sich für jeden zugeordneten Testfall festlegen; ohne eigene Angabe gilt die Prüferentscheidung aus „Validierung &amp; Bericht“.</p>
             {filtered.length === 0 ? (
               <p className="muted">Keine Testfälle entsprechen den gewählten Filtern.</p>
             ) : (
@@ -263,7 +288,7 @@ export function TestReportPage() {
                     <tbody>
                       {shown.map((c) => {
                         const on = assigned.has(c.id);
-                        const result = caseResult(latest.get(c.id));
+                        const result = caseOutcome(c.id, draft.outcomes, latest);
                         return (
                           <tr key={c.id} className={on ? "assigned" : ""}>
                             <td className="check">
@@ -273,7 +298,18 @@ export function TestReportPage() {
                             <td><div>{c.requirementId}</div><small className="muted">{sourceOf(c.requirementId)}</small></td>
                             <td><PriorityBadge value={c.priority} /></td>
                             <td><Status value={c.review.decision} /></td>
-                            <td className={result.binding ? "" : "muted"}>{result.label}</td>
+                            <td>
+                              {on ? (
+                                <>
+                                  <select className={`miniselect st-${OUTCOME_CLASS[result.outcome]}`} value={result.outcome} aria-label={`Ergebnis von ${c.id}`} onChange={(e) => setOutcome(c.id, e.target.value as TestOutcome)}>
+                                    {TEST_OUTCOMES.map((o) => <option key={o}>{o}</option>)}
+                                  </select>
+                                  <small className="muted defaulthint">{result.source === "manuell" ? "manuell gesetzt" : result.source === "Abgleich" ? "aus dem Abgleich" : "kein Abgleich"}</small>
+                                </>
+                              ) : (
+                                <span className={`status ${OUTCOME_CLASS[result.outcome]}`}>{result.outcome}</span>
+                              )}
+                            </td>
                           </tr>
                         );
                       })}

@@ -482,3 +482,10 @@ button.cellbtn:hover:not(:disabled) { color: var(--button); background: var(--bu
 .softwarecases { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .softwarecases li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
 .softwaretable .nowrap { white-space: nowrap; }
+
+/* Editable result (Ergebnis) in the Testbericht table */
+select.miniselect { padding: 5px 8px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px; font-weight: 600; cursor: pointer; max-width: 100%; }
+select.miniselect.st-good { background: var(--good-bg); color: var(--good); }
+select.miniselect.st-bad { background: var(--bad-bg); color: var(--bad); }
+select.miniselect.st-neutral { background: var(--neutral-bg); color: var(--neutral); }
+.defaulthint { display: block; margin-top: 3px; font-size: 11px; }
