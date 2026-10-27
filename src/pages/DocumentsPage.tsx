@@ -19,6 +19,7 @@ import type { Req } from "../types/requirement";
 import type { GeneratedTestCase, Priority } from "../types/review";
 import { PRIORITIES } from "../types/review";
 import { detectRuleChanges } from "../changes/ruleDiff";
+import { useConfirm } from "../state/confirmContext";
 
 const KIND_HINT: Record<DocKind, string> = {
   Fachlich: "Rechtliche/fachliche Vorgaben",
@@ -103,6 +104,7 @@ function useRuleComparison() {
 
 function DocumentCard({ doc, active, caseCount, onSelect }: { doc: SourceDocument; active: boolean; caseCount: number; onSelect: () => void }) {
   const { setRole, removeDocument, documents, setPredecessor } = useDocuments();
+  const confirm = useConfirm();
   const { requirements } = useReviewStore();
   const compare = useRuleComparison();
   const [compareNote, setCompareNote] = useState("");
@@ -128,7 +130,7 @@ function DocumentCard({ doc, active, caseCount, onSelect }: { doc: SourceDocumen
           setCompareNote(`${run.counts.geaendert} geändert · ${run.counts.neu} neu · ${run.counts.entfallen} entfallen – siehe Änderungsprotokoll`);
         }}>Mit Vorgänger vergleichen</button>
       )}
-      <div className="actions"><button className={active ? "primary" : ""} onClick={onSelect}>{active ? "Ausgewählt" : "Bearbeiten"}</button><button title="Dokument entfernen" onClick={() => { if (window.confirm(`„${doc.name}“ entfernen? Bereits erzeugte Testfälle bleiben erhalten.`)) removeDocument(doc.id); }}><Trash2 size={15} /></button></div>
+      <div className="actions"><button className={active ? "primary" : ""} onClick={onSelect}>{active ? "Ausgewählt" : "Bearbeiten"}</button><button title="Dokument entfernen" onClick={async () => { if (await confirm({ title: "Dokument entfernen?", message: `„${doc.name}“ wird entfernt. Bereits erzeugte Testfälle bleiben erhalten.`, confirmLabel: "Entfernen" })) removeDocument(doc.id); }}><Trash2 size={15} /></button></div>
     </div>
     <p className="muted small">Dokumentart automatisch erkannt ({KIND_HINT[doc.classification.kind]}). {ROLE_HINT[doc.role]}.</p>
     {compareNote && <p className="status good">{compareNote}</p>}

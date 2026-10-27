@@ -10,12 +10,14 @@ import { ChangeLog } from "./pages/ChangeLog";
 import { FeedbackPage } from "./pages/FeedbackPage";
 import { ReviewProvider } from "./state/ReviewProvider";
 import { DocumentProvider } from "./state/DocumentProvider";
+import { ConfirmProvider } from "./components/ConfirmDialog";
 
 export function App() {
   return (
     <ReviewProvider>
       {/* DocumentProvider logs to the change log, so it sits inside ReviewProvider. */}
       <DocumentProvider>
+        <ConfirmProvider>
         <BrowserRouter>
           <div className="layout">
             <Sidebar />
@@ -37,6 +39,7 @@ export function App() {
             </main>
           </div>
         </BrowserRouter>
+        </ConfirmProvider>
       </DocumentProvider>
     </ReviewProvider>
   );

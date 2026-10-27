@@ -77,4 +77,6 @@
 
   /* Elevation of floating lists (dropdowns) */
   --shadow: rgba(16, 24, 32, 0.14);
+  /* Dimmed page behind a dialog */
+  --overlay: rgba(16, 24, 32, 0.45);
 }

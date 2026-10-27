@@ -382,3 +382,12 @@ button.reqpickitem.selected, .viewswitch button.selected { border-color: var(--p
 .viewswitch button { padding: 14px 16px; }
 button.link { color: var(--primary-ink); padding: 5px; }
 button.docname { padding: 0; }
+
+/* ---------- Confirmation dialog (replaces the browser's confirm pop-up) ---------- */
+.confirmdialog { border: 0; padding: 0; border-radius: 10px; background: transparent; max-width: min(460px, calc(100vw - 32px)); width: 100%; }
+.confirmdialog::backdrop { background: var(--overlay); }
+.confirmbox { display: grid; grid-template-columns: auto 1fr; gap: 14px 16px; padding: 24px; background: var(--surface); border-radius: 10px; border-top: 4px solid var(--button); box-shadow: 0 18px 48px var(--shadow); color: var(--text); }
+.confirmicon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--button-tint); color: var(--button); }
+.confirmbox h3 { margin: 2px 0 6px; font-size: 18px; }
+.confirmbox p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+.confirmactions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
