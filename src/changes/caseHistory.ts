@@ -13,6 +13,7 @@ export const CASE_CHANGE_KINDS = [
   "Neu erzeugt aus Feedback",
   "Bewertet",
   "Feedback eingereicht",
+  "Testdaten geändert",
   "Feedback geschaltet",
   "Abgeglichen",
   "Regel geändert – prüfen",
@@ -58,7 +59,7 @@ export function buildCaseHistory(changelog: ChangeLogEntry[], ruleChanges: RuleC
     } else if (e.kind === "Prüfung" && e.testCaseId) {
       rows.push({
         id: e.id, timestamp: e.timestamp, caseId: e.testCaseId, requirementId: e.requirementId,
-        kind: e.summary.startsWith("Feedback zu") ? "Feedback eingereicht" : "Bewertet",
+        kind: e.summary.startsWith("Feedback zu") ? "Feedback eingereicht" : e.summary.startsWith("Testdaten ") ? "Testdaten geändert" : "Bewertet",
         summary: e.summary, before: e.before, after: e.after,
       });
     } else if (e.kind === "Validierung" && e.testCaseId) {

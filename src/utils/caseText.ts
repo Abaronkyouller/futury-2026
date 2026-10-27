@@ -46,3 +46,35 @@ export function isConditionStatusRow(row: { field: string; value: string }): boo
 export function visibleFields<T extends { field: string; value: string }>(rows: T[]): T[] {
   return rows.filter((row) => !isConditionStatusRow(row));
 }
+
+/** Longest condition-row value that still counts as a concrete test value ("41 Tage", "genau 3 Monate"). */
+const MAX_CONCRETE_CONDITION_VALUE = 40;
+
+type DataCase = ConditionCase & { origin: { kind: string } };
+
+/**
+ * Whether a case has concrete test data (values one can enter into the payroll
+ * software) and, if not, why. Some cases cannot have any, by construction:
+ * - rule-based "all conditions fulfilled" and negative cases only state
+ *   "erfüllt" / "nicht erfüllt" per condition – the source gives no values;
+ * - rule-based obligations ("Vorgabe erfüllt") have no thresholds or values;
+ * - a model or the offline demo may simply have returned none.
+ * Boundary cases ("41 Tage") and model cases with values have test data.
+ */
+export function testDataAvailability(item: DataCase): { available: boolean; reason: string } {
+  const concrete = visibleFields(item.testData ?? []).some((f) => {
+    const value = f.value.trim();
+    if (!value || value.includes("[offen")) return false;
+    // Condition rows only count when they carry a short concrete value, not the condition text.
+    if (CONDITION_ROW.test(f.field)) return /\d/.test(value) && value.length <= MAX_CONCRETE_CONDITION_VALUE;
+    return true;
+  });
+  if (concrete) return { available: true, reason: "" };
+  if (item.origin.kind === "regelbasiert") {
+    if (/^Vorgabe erfüllt/i.test(item.title)) {
+      return { available: false, reason: "Reine Pflichtvorgabe: Die Quelle nennt weder Werte noch Grenzen. Testdaten lassen sich daraus nicht ableiten – der Prüfer muss sie fachlich festlegen." };
+    }
+    return { available: false, reason: "Die Quelle nennt für die Bedingungen keine konkreten Werte, nur „erfüllt“ oder „nicht erfüllt“. Daraus lassen sich keine Testdaten ableiten." };
+  }
+  return { available: false, reason: "Für diesen Testfall wurden keine konkreten Testdaten geliefert." };
+}

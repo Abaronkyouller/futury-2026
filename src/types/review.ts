@@ -41,6 +41,17 @@ export type ReasoningStep = {
 export type ExpectedField = { field: string; value: string };
 
 /**
+ * Test datasets maintained by the examiner for one case (table: one row per
+ * dataset, one column per field). Kept apart from the generated proposal in
+ * `testData`, so model output and examiner input stay distinguishable.
+ */
+export type TestDatasets = {
+  columns: string[];
+  rows: string[][];
+  updatedAt: string; // ISO timestamp
+};
+
+/**
  * One step of the test procedure, typically a message exchanged between the
  * payroll software (Arbeitgeber) and the health insurer (Krankenkasse), e.g.
  * "Arbeitgeber sendet DBVO mit Abgabegrund 41".
@@ -109,6 +120,8 @@ export type GeneratedTestCase = {
   sourceRefs: string[];
   openQuestions: string[];
   checks: CheckResult[];
+  /** Examiner-maintained test datasets; absent until the examiner creates one (default: none). */
+  datasets?: TestDatasets;
   /** Deterministic source/ontology/graph/rule provenance details. */
   trace?: CaseTrace;
   origin: GenerationOrigin;

@@ -6,6 +6,7 @@ import type {
   GeneratedTestCase,
   GenerationSettings,
   ReviewDecision,
+  TestDatasets,
 } from "../types/review";
 import type { ComparisonFeedback, ResultComparison } from "../types/validation";
 import type { MaintainerNote, NoteScope } from "../types/feedback";
@@ -46,6 +47,11 @@ export type ReviewStore = ReviewState & {
   reviewCase: (caseId: string, decision: ReviewDecision, comment: string) => void;
   /** Persists feedback before a replacement case is generated. */
   submitCaseFeedback: (caseId: string, comment: string) => void;
+  /**
+   * Saves the examiner's test datasets of a case. With `change` (e.g. "3 Datensätze angelegt")
+   * the change is logged; plain cell edits pass no `change` and are saved silently.
+   */
+  setTestDatasets: (caseId: string, datasets: TestDatasets, change?: string) => void;
   /** Stores one two-model comparison and logs it. */
   addComparison: (comparison: ResultComparison) => void;
   /** Records the examiner's binding verdict on a comparison; the previous value is logged. */

@@ -206,6 +206,25 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setTestDatasets = useCallback<ReviewStore["setTestDatasets"]>((caseId, datasets, change) => {
+    setState((s) => {
+      const target = s.cases.find((c) => c.id === caseId);
+      if (!target) return s;
+      const stamped = { ...datasets, updatedAt: new Date().toISOString() };
+      const cases = s.cases.map((c) => (c.id === caseId ? { ...c, datasets: stamped } : c));
+      if (!change) return { ...s, cases };
+      const count = (d?: { rows: string[][]; columns: string[] }) => (d ? `${d.rows.length} Datensatz/Datensätze · Spalten: ${d.columns.join(", ") || "–"}` : "keine Datensätze");
+      return {
+        ...s,
+        cases,
+        changelog: [
+          ...s.changelog,
+          entry({ kind: "Prüfung", requirementId: target.requirementId, testCaseId: caseId, summary: `Testdaten ${caseId}: ${change}`, before: count(target.datasets), after: count(datasets) }),
+        ],
+      };
+    });
+  }, []);
+
   const reviewCase = useCallback<ReviewStore["reviewCase"]>((caseId, decision, comment) => {
     setState((s) => {
       const target = s.cases.find((c) => c.id === caseId);
@@ -366,8 +385,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const store = useMemo<ReviewStore>(
-    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, recordRuleChanges, updateSettings, resetCases, logEvent }),
-    [state, recordRuleChanges, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
+    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, recordRuleChanges, updateSettings, resetCases, logEvent }),
+    [state, recordRuleChanges, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
   );
 
   return <ReviewContext.Provider value={store}>{children}</ReviewContext.Provider>;

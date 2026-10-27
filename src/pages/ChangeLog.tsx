@@ -29,6 +29,7 @@ const CASE_CLASS: Record<CaseChangeKind, string> = {
   "Neu erzeugt aus Feedback": "kind-gen",
   Bewertet: "kind-review",
   "Feedback eingereicht": "kind-feedback",
+  "Testdaten geändert": "kind-review",
   "Feedback geschaltet": "kind-feedback",
   Abgeglichen: "kind-validation",
   "Regel geändert – prüfen": "kind-rulechange",

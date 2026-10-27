@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, Check, RefreshCw, X } from "lucide-react";
 import type { Basis, GeneratedTestCase, OriginKind, Priority } from "../types/review";
 import { ORIGIN_LABEL } from "../types/review";
 import { OPEN_VALUE_MARKER } from "../config/ai";
@@ -8,9 +8,10 @@ import { useGeneration } from "../state/useGeneration";
 import { buildCaseTrace } from "../reasoning/trace";
 import { expectedStatus } from "../reasoning/expectedStatus";
 import { CaseBackendDetails } from "./CaseBackendDetails";
+import { TestDataEditor } from "./TestDataEditor";
 import { Status } from "./Status";
 import { formatDateTime } from "../utils/format";
-import { sanitizeCaseTitle, visibleFields } from "../utils/caseText";
+import { sanitizeCaseTitle, testDataAvailability, visibleFields } from "../utils/caseText";
 
 /** CSS modifier per priority flag. */
 const PRIORITY_CLASS: Record<Priority, string> = { Hoch: "bad", Mittel: "warn", Niedrig: "info" };
@@ -101,6 +102,7 @@ export function GeneratedCaseCard({
   const displayTitle = sanitizeCaseTitle(item.title);
   // Condition bookkeeping rows are not test data (see utils/caseText.ts).
   const testData = visibleFields(item.testData);
+  const dataInfo = testDataAvailability(item);
 
   const submitFeedback = async () => {
     const feedback = comment.trim();
@@ -175,12 +177,20 @@ export function GeneratedCaseCard({
         <p>{item.then || "—"}</p>
       </div>
 
-      {testData.length > 0 && (
+      <h5 className="minihead">TESTDATEN</h5>
+      {!dataInfo.available && (
+        <div className="nodata" role="note">
+          <AlertTriangle size={18} />
+          <div><b>Dieser Testfall hat keine Testdaten.</b> {dataInfo.reason}</div>
+        </div>
+      )}
+      {testData.length > 0 && dataInfo.available && (
         <>
-          <h5 className="minihead">TESTDATEN</h5>
+          <p className="muted small">Vorschlag ({ORIGIN_LABEL[kind]}):</p>
           <FieldTable rows={testData} />
         </>
       )}
+      <TestDataEditor item={item} template={dataInfo.available ? testData : []} canRandomize={dataInfo.available} />
 
       {item.steps.length > 0 && (
         <>
