@@ -3,6 +3,7 @@ import type { GeneratedTestCase } from "../types/review";
 import { ORIGIN_LABEL } from "../types/review";
 import type { TraceEvidence } from "../types/reasoning";
 import type { ResultComparison } from "../types/validation";
+import { modelRatingLabel } from "../types/validation";
 import { cases as sampleCases } from "../data/testCases";
 import { OPEN_VALUE_MARKER } from "../config/ai";
 import { normalizeForMatch, tokenize, truncate } from "../documents/text";
@@ -170,7 +171,7 @@ function resultNodes(c: GeneratedTestCase, cmp: ResultComparison | undefined): G
   return [
     { id: `${c.id}-obs`, layer: 6, kind: "Beobachtet", label: `Importiert: ${cmp.resultName}`, evidence: "source", warnings: [], caseId: c.id, details: [["Ergebnisdatei", cmp.resultName], ["Abgleich", `${cmp.id} · ${cmp.createdAt}`], ...assessments] },
     cmp.feedback
-      ? { id: `${c.id}-fnd`, layer: 6, kind: "Befund", label: `Prüfer: ${cmp.feedback.verdict}`, evidence: "source", warnings: [], caseId: c.id, details: [["Prüferurteil", cmp.feedback.verdict], ["Zutreffende Einschätzung", cmp.feedback.rating], ["Kommentar", cmp.feedback.comment || "–"]] }
+      ? { id: `${c.id}-fnd`, layer: 6, kind: "Befund", label: `Prüfer: ${cmp.feedback.verdict}`, evidence: "source", warnings: [], caseId: c.id, details: [["Prüferurteil", cmp.feedback.verdict], ["Zutreffende Einschätzung", modelRatingLabel(cmp.feedback.rating)], ["Kommentar", cmp.feedback.comment || "–"]] }
       : { id: `${c.id}-fnd`, layer: 6, kind: "Befund", label: `Vorläufig: ${cmp.consensus}`, evidence: "model", warnings: ["Noch keine Prüferentscheidung – unverbindlich."], caseId: c.id, details: [["Konsens", cmp.consensus]] },
   ];
 }

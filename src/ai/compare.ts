@@ -330,11 +330,16 @@ export async function compareResult({ testCase, result, history, notes = [] }: C
  * recomputes the agreement and maps the old rating ("Modell A" → "KI").
  */
 export function normalizeComparison(c: ResultComparison): ResultComparison {
-  if (c.assessments.length === 2) return c;
   const ki = { ...c.assessments[0], label: COMPARE_MODEL.label };
-  const rule = c.assessments[c.assessments.length - 1];
+  const rule = { ...c.assessments[c.assessments.length - 1], label: RULE_ASSESSOR_LABEL };
   const rating = c.feedback?.rating as string | undefined;
-  const mapped: ModelRating = rating === "Modell A" ? "KI" : (MODEL_RATINGS as readonly string[]).includes(rating ?? "") ? (rating as ModelRating) : "Keines";
+  const mapped: ModelRating = rating === "Modell A"
+    ? "KI"
+    : rating === "Modell B" || rating === "Regelbasiert"
+      ? "Regelbasiert"
+      : (MODEL_RATINGS as readonly string[]).includes(rating ?? "")
+        ? (rating as ModelRating)
+        : "Keines";
   return {
     ...c,
     assessments: [ki, rule],

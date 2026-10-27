@@ -19,4 +19,4 @@ export const COMPARE_TEMPERATURE = 0;
 export const COMPARE_MAX_TOKENS = 3000;
 
 /** Label of the deterministic reference assessor. */
-export const RULE_ASSESSOR_LABEL = "Regelbasiert";
+export const RULE_ASSESSOR_LABEL = "Kontroll-KI";

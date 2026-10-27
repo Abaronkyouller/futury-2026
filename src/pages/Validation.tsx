@@ -8,7 +8,7 @@ import { Status } from "../components/Status";
 import { ComparisonView } from "../components/ComparisonView";
 import { CaseCombobox } from "../components/CaseCombobox";
 import { COMPARE_MODEL } from "../config/ai";
-import { RESULT_FILE_TYPES } from "../config/validation";
+import { RESULT_FILE_TYPES, RULE_ASSESSOR_LABEL } from "../config/validation";
 import { compareResult, suggestCases } from "../ai/compare";
 import { useReviewStore } from "../state/reviewContext";
 import { useResults } from "../state/useResults";
@@ -44,7 +44,7 @@ function exportReport(comparisons: ResultComparison[]) {
     "pruefbericht-abgleiche.csv",
     toCsv([
       ["Abgleich", "Zeitpunkt", "Ergebnisdatei", "Testfall", "Anforderung", "Feld", "Erwartet",
-        "KI Urteil", "KI gelesen", "Regelbasiert Urteil", "Regelbasiert gelesen", "KI und Regel einig", "Gesamt (KI ↔ Regel)",
+        "KI Urteil", "KI gelesen", `${RULE_ASSESSOR_LABEL} Urteil`, `${RULE_ASSESSOR_LABEL} gelesen`, `KI und ${RULE_ASSESSOR_LABEL} einig`, `Gesamt (KI ↔ ${RULE_ASSESSOR_LABEL})`,
         "Prüfer Feld", "Prüfer gesamt", "Prüfer Kommentar"],
       ...rows,
     ]),
@@ -127,7 +127,7 @@ export function Validation() {
   const reviewed = comparisons.filter((c) => c.feedback);
   const kiAnswered = comparisons.filter((c) => c.assessments[0].ok);
   const agreed = kiAnswered.filter((c) => c.consensus !== "Uneinig").length;
-  const accuracy = [COMPARE_MODEL.label, "Regelbasiert"].map((label, i) => ({
+  const accuracy = [COMPARE_MODEL.label, RULE_ASSESSOR_LABEL].map((label, i) => ({
     label,
     right: reviewed.filter((c) => c.assessments[i]?.ok && c.assessments[i].overall === c.feedback!.verdict).length,
   }));
@@ -149,7 +149,6 @@ export function Validation() {
         <span>2 Testfall wählen & abgleichen</span>
         <span>3 Entscheidung speichern</span>
         <span>{COMPARE_MODEL.label}: {COMPARE_MODEL.model}</span>
-        {/* <span className="warm">KI und Regelabgleich schlagen vor – keine Regel-Engine angebunden</span> */}
       </div>
       {storageWarning && <div className="notice">{storageWarning}</div>}
 
@@ -237,14 +236,14 @@ export function Validation() {
       <Panel>
         <div className="paneltop">
           <h3>Prüfbericht</h3>
-          <small>Verbindlich ist die Prüferentscheidung; ohne sie gilt das gemeinsame Urteil von KI und Regelabgleich nur vorläufig.</small>
+          <small>Verbindlich ist die Prüferentscheidung; ohne sie gilt das gemeinsame Urteil von KI und Kontroll-KI nur vorläufig.</small>
         </div>
         <div className="metrics">
           {[
             ["Abgleiche", comparisons.length, `${reviewed.length} vom Prüfer entschieden`, ""],
             ["Bestanden", count("Bestanden"), "inkl. vorläufiger", "green"],
             ["Nicht bestanden", count("Nicht bestanden"), "inkl. vorläufiger", "red"],
-            ["Unklar / uneinig", count("Unklar") + count("Uneinig"), `KI und Regel einig in ${agreed} von ${kiAnswered.length}`, ""],
+            ["Unklar / uneinig", count("Unklar") + count("Uneinig"), `KI und Kontroll-KI einig in ${agreed} von ${kiAnswered.length}`, ""],
           ].map(([label, n, desc, cls]) => (
             <div key={label as string} className="panel">
               <small>{label}</small>
@@ -265,7 +264,7 @@ export function Validation() {
             <table>
               <thead>
                 <tr>
-                  {["Abgleich", "Ergebnis", "Testfall", COMPARE_MODEL.label, "Regelbasiert", "KI ↔ Regel", "Prüfer"].map((h) => <th key={h}>{h}</th>)}
+                  {["Abgleich", "Ergebnis", "Testfall", COMPARE_MODEL.label, RULE_ASSESSOR_LABEL, `KI ↔ ${RULE_ASSESSOR_LABEL}`, "Prüfer"].map((h) => <th key={h}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>

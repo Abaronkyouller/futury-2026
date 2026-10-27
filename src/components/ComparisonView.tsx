@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check, CheckCircle2, XCircle } from "lucide-react";
 import { useReviewStore } from "../state/reviewContext";
-import { FIELD_VERDICTS, MODEL_RATINGS, OVERALL_VERDICTS } from "../types/validation";
+import { FIELD_VERDICTS, MODEL_RATINGS, modelRatingLabel, OVERALL_VERDICTS } from "../types/validation";
 import type { Assessment, FieldAssessment, FieldVerdict, ModelRating, OverallVerdict, ResultComparison } from "../types/validation";
 import { formatDateTime } from "../utils/format";
 import { Status } from "./Status";
@@ -73,7 +73,7 @@ function FeedbackForm({ c }: { c: ResultComparison }) {
     <div className="feedbackform">
       <h4>Entscheidung des Prüfers</h4>
       <p className="muted small">
-        KI und regelbasierter Abgleich schlagen nur vor. Ihre Entscheidung ist das verbindliche Ergebnis im Prüfbericht und wird künftigen Abgleichen als Beispiel
+        KI und Kontroll-KI schlagen nur vor. Ihre Entscheidung ist das verbindliche Ergebnis im Prüfbericht und wird künftigen Abgleichen als Beispiel
         mitgegeben ({learned} gespeicherte Entscheidung(en) bisher).
       </p>
       <div className="filters">
@@ -89,7 +89,7 @@ function FeedbackForm({ c }: { c: ResultComparison }) {
           Welche Einschätzung trifft zu?
           <select value={rating} onChange={(e) => setRating(e.target.value as ModelRating)}>
             {MODEL_RATINGS.map((r) => (
-              <option key={r}>{r}</option>
+              <option key={r} value={r}>{modelRatingLabel(r)}</option>
             ))}
           </select>
         </label>
@@ -148,7 +148,7 @@ export function ComparisonView({ c }: { c: ResultComparison }) {
           </small>
         </div>
         <div className="badges">
-          <span className="muted small">KI und Regelbasiert</span>
+          <span className="muted small">KI und Kontroll-KI</span>
           <Status value={c.consensus} />
           {c.feedback && (
             <>
@@ -202,7 +202,7 @@ export function ComparisonView({ c }: { c: ResultComparison }) {
       </div>
 
       <details className="checks">
-        <summary>Begründung je Feld · KI und Regelbasiert</summary>
+        <summary>Begründung je Feld · KI und Kontroll-KI</summary>
         {c.assessments.filter((x) => x.ok).map((x) => (
           <div key={x.label}>
             <h5 className="minihead">

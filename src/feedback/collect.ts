@@ -4,6 +4,7 @@ import type { Req } from "../types/requirement";
 import type { GeneratedTestCase } from "../types/review";
 import { ORIGIN_LABEL } from "../types/review";
 import type { ResultComparison } from "../types/validation";
+import { modelRatingLabel } from "../types/validation";
 
 /**
  * Builds the feedback database from the review state and selects what goes
@@ -59,7 +60,7 @@ export function collectFeedback({ cases, comparisons, requirements, notes, exclu
       documentName: cmp.resultName,
       decision: cmp.feedback.verdict,
       comment: cmp.feedback.comment,
-      detail: `„${cmp.resultName}“ ↔ ${cmp.testCaseId} · zutreffend: ${cmp.feedback.rating}`,
+      detail: `„${cmp.resultName}“ ↔ ${cmp.testCaseId} · zutreffend: ${modelRatingLabel(cmp.feedback.rating)}`,
       scope: "Abgleich",
       active: isActive(cmp.id, excluded),
     });

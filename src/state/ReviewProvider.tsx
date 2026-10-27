@@ -9,6 +9,7 @@ import type { LogInput, ReviewState, ReviewStore } from "./reviewContext";
 import { sanitizeCaseTitle } from "../utils/caseText";
 import { redistributePriorities } from "../utils/priority";
 import type { ComparisonFeedback, ResultComparison } from "../types/validation";
+import { modelRatingLabel } from "../types/validation";
 import { normalizeComparison } from "../ai/compare";
 import type { TestReport } from "../types/testReport";
 
@@ -152,7 +153,7 @@ function describeComparison(c: ResultComparison): string {
 }
 
 const describeFeedback = (f: ComparisonFeedback | undefined) =>
-  f ? `${f.verdict} · zutreffend: ${f.rating}${f.comment ? ` · "${f.comment}"` : ""}` : "Keine Prüferentscheidung";
+  f ? `${f.verdict} · zutreffend: ${modelRatingLabel(f.rating)}${f.comment ? ` · "${f.comment}"` : ""}` : "Keine Prüferentscheidung";
 
 const describeReq = (r: Req) => `${r.status}${r.comment ? ` · "${r.comment}"` : ""}`;
 

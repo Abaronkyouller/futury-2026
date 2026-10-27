@@ -49,7 +49,7 @@ export type FieldAssessment = {
 export type AssessorKind = "model" | "regelbasiert";
 
 export type Assessment = {
-  /** Display label: "KI" or "Regelbasiert". */
+  /** Display label: "KI" or "Kontroll-KI". */
   label: string;
   kind: AssessorKind;
   /** Model id, or "regelbasiert". */
@@ -73,6 +73,11 @@ export type Consensus = OverallVerdict | "Uneinig";
 /** Which assessment the examiner considered right. */
 export const MODEL_RATINGS = ["KI", "Regelbasiert", "Beide", "Keines"] as const;
 export type ModelRating = (typeof MODEL_RATINGS)[number];
+
+/** User-facing name for an internally stable examiner rating. */
+export function modelRatingLabel(rating: ModelRating): string {
+  return rating === "Regelbasiert" ? "Kontroll-KI" : rating;
+}
 
 /** Examiner's binding decision on one comparison; fed back into later comparison prompts. */
 export type ComparisonFeedback = {

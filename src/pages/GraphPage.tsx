@@ -54,7 +54,6 @@ export function GraphPage() {
   const caseParam = params.get("case") ?? undefined;
   const baseGraph = req ? buildReasoningGraph(req, cases, comparisons) : undefined;
   const traceCases = (baseGraph?.cases ?? []).map((c) => ({ id: c.id, testCase: cases.find((x) => x.id === c.id) }));
-  const hiddenRejected = baseGraph?.hiddenRejected ?? 0;
   // Cases opened by the examiner; the case named in the URL (or the first one) starts open.
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   const defaultOpen = caseParam ?? traceCases[0]?.id;
