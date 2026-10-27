@@ -261,3 +261,4 @@ table.cmp tbody tr.disagree td, table.cmp tbody tr.disagree th { background: var
 .combomain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
 .combotag { font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 7px; background: var(--source-bg); color: var(--source); }
 .comboempty { color: var(--muted); cursor: default; }
+.reasons li { margin-bottom: 6px; line-height: 1.6; }

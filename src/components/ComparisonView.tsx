@@ -202,14 +202,16 @@ export function ComparisonView({ c }: { c: ResultComparison }) {
       </div>
 
       <details className="checks">
-        <summary>Begründung der KI je Feld</summary>
-        {c.assessments.filter((x) => x.kind === "model" && x.ok).map((x) => (
+        <summary>Begründung je Feld · KI und Regelbasiert</summary>
+        {c.assessments.filter((x) => x.ok).map((x) => (
           <div key={x.label}>
-            <h5 className="minihead">{x.label.toUpperCase()} · {x.model}</h5>
-            <ul className="plain">
+            <h5 className="minihead">
+              {x.label.toUpperCase()} · {x.kind === "model" ? x.model : "Zeilenabgleich Feldname/Wert"}
+            </h5>
+            <ul className="plain reasons">
               {x.fields.map((f) => (
                 <li key={f.field}>
-                  <b>{f.field}:</b> {f.explanation || "–"}
+                  <b>{f.field}:</b> <Status value={f.verdict} /> {f.explanation || "–"}
                   {f.quote && <small className="muted"> · Beleg: „{f.quote}“</small>}
                 </li>
               ))}
