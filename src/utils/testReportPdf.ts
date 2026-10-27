@@ -3,7 +3,7 @@ import type { GeneratedTestCase } from "../types/review";
 import type { TestReport } from "../types/testReport";
 import type { ResultComparison } from "../types/validation";
 import { caseHtml, escapeHtml } from "./testCasePdf";
-import { PRIVACY_EXPORT_NOTE, publicRows } from "./privacy";
+import { PRIVACY_EXPORT_NOTE } from "./privacy";
 import { caseOutcome, countOutcomes, latestComparisons } from "./testOutcome";
 
 /** Theme tokens copied into the print window, so the report uses the colours of theme.css (no literals here). */
@@ -15,16 +15,6 @@ export function themeVars(): string {
 
 const fmt = (iso: string) => new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 
-/** Examiner datasets of a case as a table (empty string when there are none). */
-function datasetsHtml(item: GeneratedTestCase): string {
-  const d = item.datasets;
-  // Only public datasets are exported.
-  const rows = d ? publicRows(d) : [];
-  if (!d || !rows.length) return "";
-  return `<section><h3>Testdatensätze (vom Prüfer gepflegt)</h3><table class="grid"><thead><tr><th>Nr.</th>${d.columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${rows
-    .map((row, i) => `<tr><td>${i + 1}</td>${d.columns.map((_, j) => `<td>${escapeHtml(row[j] ?? "")}</td>`).join("")}</tr>`)
-    .join("")}</tbody></table></section>`;
-}
 
 /**
  * Opens a print-ready test report for one software (save as PDF in the print
@@ -93,7 +83,7 @@ export function printTestReport(report: TestReport, cases: GeneratedTestCase[], 
     <p class="note">Das Ergebnis je Testfall hat der Prüfer für diese Software gesetzt („manuell gesetzt“) oder es stammt aus der Prüferentscheidung im Abgleich unter „Validierung &amp; Bericht“. Ohne beides gilt der Test als noch nicht durchgeführt. Testfälle sind Vorschläge des Prüfassistenten und ersetzen keine fachliche Prüfung.</p>
     <h3>Übersicht der Testfälle</h3>
     <table class="overview"><thead><tr><th>ID</th><th>Titel</th><th>Anforderung</th><th>Priorität</th><th>Prüfstatus</th><th>Ergebnis</th></tr></thead><tbody>${overview || `<tr><td colspan="6">Keine Testfälle zugeordnet.</td></tr>`}</tbody></table>
-    ${cases.map((c) => caseHtml(c, reqs.get(c.requirementId)).replace(/<\/article>\s*$/, `${datasetsHtml(c)}<section><h3>Ergebnis</h3><p>${escapeHtml(caseOutcome(c.id, report.outcomes, latest).outcome)}</p></section></article>`)).join("")}
+    ${cases.map((c) => caseHtml(c, reqs.get(c.requirementId)).replace(/<\/article>\s*$/, `<section><h3>Ergebnis</h3><p>${escapeHtml(caseOutcome(c.id, report.outcomes, latest).outcome)}</p></section></article>`)).join("")}
   </body></html>`);
   win.document.close();
   win.focus();

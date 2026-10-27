@@ -1,6 +1,7 @@
 import type { Req } from "../types/requirement";
 import type { GeneratedTestCase } from "../types/review";
-import { visibleFields } from "./caseText";
+import { testDataAvailability, visibleFields } from "./caseText";
+import { rowPrivacy } from "./privacy";
 
 export const escapeHtml = (value: string) => value
   .replace(/&/g, "&amp;")
@@ -12,6 +13,30 @@ export const escapeHtml = (value: string) => value
 function rows(items: { field: string; value: string }[]): string {
   if (!items.length) return "<p>–</p>";
   return `<table><tbody>${items.map((item) => `<tr><th>${escapeHtml(item.field)}</th><td>${escapeHtml(item.value)}</td></tr>`).join("")}</tbody></table>`;
+}
+
+/**
+ * Test data of a case for the PDF: the proposal of the generator and the
+ * datasets maintained by the examiner (public rows only, numbered as in the
+ * app). Cases that cannot have test data say so instead.
+ */
+function testDataHtml(item: GeneratedTestCase): string {
+  const availability = testDataAvailability(item);
+  if (!availability.available && !item.datasets?.rows.length) {
+    return `<p><b>Keine Testdaten.</b> ${escapeHtml(availability.reason)}</p>`;
+  }
+  const proposal = visibleFields(item.testData);
+  const parts: string[] = [];
+  if (availability.available && proposal.length) parts.push(`<h4>Vorschlag</h4>${rows(proposal)}`);
+  const d = item.datasets;
+  const publicIdx = d ? d.rows.map((_, i) => i).filter((i) => rowPrivacy(d, i) === "Öffentlich") : [];
+  if (d && publicIdx.length) {
+    parts.push(`<h4>Testdatensätze (${publicIdx.length})</h4><table class="grid"><thead><tr><th>Nr.</th>${d.columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${publicIdx
+      .map((i) => `<tr><td>${i + 1}</td>${d.columns.map((_, j) => `<td>${escapeHtml(d.rows[i][j] ?? "")}</td>`).join("")}</tr>`)
+      .join("")}</tbody></table>`);
+  }
+  if (d && publicIdx.length < d.rows.length) parts.push(`<p class="note">${d.rows.length - publicIdx.length} privater Testdatensatz/private Testdatensätze nicht enthalten.</p>`);
+  return parts.join("") || "<p>–</p>";
 }
 
 export function caseHtml(item: GeneratedTestCase, req: Req | undefined): string {
@@ -41,7 +66,7 @@ export function caseHtml(item: GeneratedTestCase, req: Req | undefined): string 
       <h4>WENN</h4><p>${escapeHtml(item.when || "–")}</p>
       <h4>DANN</h4><p>${escapeHtml(item.then || "–")}</p>
     </section>
-    <section><h3>Testdaten</h3>${rows(visibleFields(item.testData))}</section>
+    <section><h3>Testdaten</h3>${testDataHtml(item)}</section>
     <section><h3>Ablauf / Nachrichtenfolge</h3>${flow}</section>
     <section><h3>Erwartetes Ergebnis</h3>${rows(item.expectedFields)}</section>
     <section><h3>Kriterien</h3><p>${item.criteriaIds.length ? item.criteriaIds.map(escapeHtml).join(" · ") : "–"}</p></section>
@@ -59,6 +84,8 @@ export function printTestCasesAsPdf(cases: GeneratedTestCase[], requirements: Re
   const generatedAt = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date());
   report.document.write(`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Testfallkatalog</title><style>
     @page { size: A4; margin: 16mm; }
+    table.grid th { width: auto; } table.grid td:first-child, table.grid th:first-child { width: 12mm; }
+    .note { font-size: 8.5pt; font-style: italic; }
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4; margin: 0; }
     .report-head { border-bottom: 2px solid currentColor; margin-bottom: 8mm; padding-bottom: 4mm; }
