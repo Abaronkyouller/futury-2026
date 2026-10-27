@@ -80,13 +80,14 @@ export type ReviewDecision = "Offen" | "Akzeptiert" | "Abgelehnt";
  * - regelbasiert: derived deterministically from the verbatim source quote (no model call)
  * - offline-demo: canned response for the illustrative sample requirements, never a model call
  */
-export type OriginKind = "model" | "regelbasiert" | "offline-demo";
+export type OriginKind = "model" | "regelbasiert" | "offline-demo" | "manuell";
 
 /** UI labels per origin kind. */
 export const ORIGIN_LABEL: Record<OriginKind, string> = {
   model: "KI-Vorschlag",
   regelbasiert: "Regelbasiert abgeleitet",
   "offline-demo": "Offline-Demo (simuliert)",
+  manuell: "Manuell erstellt (Prüfer)",
 };
 
 export type GenerationOrigin = {

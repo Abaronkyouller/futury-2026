@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Download, Search } from "lucide-react";
+import { Download, Plus, Search } from "lucide-react";
+import { ManualCaseDialog } from "../components/ManualCaseDialog";
 import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
 import { GeneratedCaseCard } from "../components/GeneratedCaseCard";
@@ -29,6 +30,8 @@ export function Tests() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createdNotice, setCreatedNotice] = useState("");
 
   const normalizedQuery = query.trim().toLocaleLowerCase("de-DE");
   const requirementsById = new Map(requirements.map((req) => [req.id, req]));
@@ -54,8 +57,27 @@ export function Tests() {
     <Header
       title="Testfälle"
       subtitle="Testfälle filtern, aufklappen und prüfen. Maximal zehn Fälle werden je Seite angezeigt. Änderungen je Testfall stehen im Änderungsprotokoll."
-      action={<button className="primary" disabled={filtered.length === 0} onClick={() => printTestCasesAsPdf(filtered, requirements, sourceFilter)}><Download size={15} /> Gefilterte Testfälle als PDF</button>}
+      action={
+        <div className="actions">
+          <button className="primary" disabled={requirements.length === 0} onClick={() => setCreating(true)}><Plus size={15} /> Testfall manuell anlegen</button>
+          <button disabled={filtered.length === 0} onClick={() => printTestCasesAsPdf(filtered, requirements, sourceFilter)}><Download size={15} /> Gefilterte Testfälle als PDF</button>
+        </div>
+      }
     />
+    {creating && (
+      <ManualCaseDialog
+        requirements={requirements}
+        onClose={() => setCreating(false)}
+        onCreated={(id) => {
+          // Show the new case: search for its id and open it.
+          setCreating(false);
+          setQuery(id); setPriorityFilter("Alle"); setReviewFilter("Alle"); setSourceFilter("Alle"); setOutcomeFilter("Alle");
+          setPage(1); setSelected(id);
+          setCreatedNotice(`Testfall ${id} wurde angelegt.`);
+        }}
+      />
+    )}
+    {createdNotice && <p className="status good creatednotice">{createdNotice}</p>}
 
     {cases.length === 0 ? <Panel><p className="muted">
       Noch keine erzeugten Testfälle. Laden Sie unter <Link to="/documents">Dokumente & Testfälle</Link> eine Spezifikation hoch

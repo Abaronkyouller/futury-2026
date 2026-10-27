@@ -22,9 +22,10 @@ import { buildOntology } from "./ontology";
  * hallucination, not proof of one; a passed check doesn't prove correctness.
  */
 
-export type GraphEvidence = "source" | "sample" | "model" | "derived" | "assumption" | "demo" | "open";
+export type GraphEvidence = "source" | "sample" | "model" | "derived" | "assumption" | "demo" | "manual" | "open";
 
 export const GRAPH_EVIDENCE_LABEL: Record<GraphEvidence, string> = {
+  manual: "Vom Prüfer eingegeben (nicht aus der Quelle abgeleitet)",
   source: "Quelle (Zitat geprüft)",
   sample: "Beispieldaten",
   model: "KI-Auslegung (ungeprüft)",
@@ -82,7 +83,7 @@ const FROM_TRACE: Record<TraceEvidence, GraphEvidence> = {
   source: "source", derived: "derived", model: "model", assumption: "assumption", open: "open",
 };
 const CASE_EVIDENCE: Record<GeneratedTestCase["origin"]["kind"], GraphEvidence> = {
-  model: "model", regelbasiert: "derived", "offline-demo": "demo",
+  model: "model", regelbasiert: "derived", "offline-demo": "demo", manuell: "manual",
 };
 /** Ontology categories shown as nodes; data fields and actors would only add noise. */
 const CONCEPT_CATEGORIES = new Set(["Voraussetzung", "Frist", "Kriterium", "Meldung", "Rechtsgrundlage", "Vorgang"]);
@@ -245,7 +246,7 @@ function expandCase(req: Req, c: GeneratedTestCase, concepts: GraphNode[], cmp: 
     nodes.push({
       id, layer: 5, kind: "Erwartet", label: `${f.field}: ${f.value}`, caseId: c.id, warnings,
       evidence: open ? "open" : warnings.length ? "open" : CASE_EVIDENCE[c.origin.kind],
-      details: [["Feld", f.field], ["Wert", f.value], ["Herkunft", open ? "Offen – der Prüfer legt den Wert fest" : "Aus Regel und Testdaten abgeleitet, nicht durch eine Abrechnung bestätigt"]],
+      details: [["Feld", f.field], ["Wert", f.value], ["Herkunft", open ? "Offen – der Prüfer legt den Wert fest" : c.origin.kind === "manuell" ? "Vom Prüfer eingegeben, nicht durch eine Abrechnung bestätigt" : "Aus Regel und Testdaten abgeleitet, nicht durch eine Abrechnung bestätigt"]],
     });
     edges.push({ id: `${id}-in`, from: c.id, to: id, relation: "erwartet", evidence: open ? "open" : CASE_EVIDENCE[c.origin.kind] });
   });

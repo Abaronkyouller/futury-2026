@@ -40,6 +40,8 @@ export type ReviewState = {
 export type LogInput = Omit<ChangeLogEntry, "id" | "timestamp">;
 
 export type ReviewStore = ReviewState & {
+  /** True when the last save to the browser storage failed (e.g. storage full); changes then live only in memory. */
+  persistFailed: boolean;
   /** Adds requirements of one extraction run and logs it. */
   addRequirements: (documentName: string, runId: string, method: ExtractionMethod, reqs: Req[]) => void;
   /** Records an examiner decision/comment on a requirement; the previous value is logged. */

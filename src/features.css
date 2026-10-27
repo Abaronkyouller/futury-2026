@@ -522,3 +522,30 @@ button.covdoc:hover:not(:disabled) { background: var(--primary-tint); border-col
 .sectionpicker .search.wide { margin: 0; }
 .sectionpicker .combolist li { font-size: 14px; }
 .sectionpicker .combomain .status { font-size: 10px; padding: 2px 7px; }
+
+/* Manual test case dialog (Testfälle → "Testfall manuell anlegen") */
+.casedialog { max-width: min(860px, calc(100vw - 32px)); }
+.casebox { background: var(--surface); border-radius: 10px; border-top: 4px solid var(--button); box-shadow: 0 18px 48px var(--shadow); padding: 22px 24px; max-height: calc(100vh - 48px); overflow-y: auto; color: var(--text); }
+.caseboxhead { display: flex; align-items: center; justify-content: space-between; }
+.caseboxhead h3 { margin: 0; font-size: 19px; }
+.casebox h4 { margin: 18px 0 6px; font-size: 13px; letter-spacing: 0.3px; color: var(--muted); text-transform: uppercase; }
+.mcgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.mcgrid .field { margin: 8px 0; }
+.mcwide { grid-column: 1 / -1; }
+.mcsource { margin: -4px 0 4px; }
+.casebox input, .casebox select, .casebox textarea { padding: 9px 11px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 14px; }
+.casebox textarea { height: 58px; resize: vertical; }
+.casebox input:focus, .casebox select:focus, .casebox textarea:focus { outline: none; border-color: var(--primary-ink); box-shadow: 0 0 0 2px var(--primary-soft); }
+.mcrows { display: flex; flex-direction: column; gap: 6px; }
+.mcrow { display: grid; grid-template-columns: 1fr 1fr 32px; gap: 8px; align-items: center; }
+.mcrow.mcstep { grid-template-columns: 150px 1fr 120px 32px; }
+button.mcadd { align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; font-size: 13px; }
+.casebox .warnlist { list-style: none; padding: 10px 14px; margin: 14px 0 0; border-radius: 7px; background: var(--bad-bg); color: var(--bad); font-size: 14px; }
+.creatednotice { display: inline-block; margin: 0 0 12px; font-size: 13px; }
+.gencase.origin-manual { border-left-color: var(--neutral); }
+.tags .origin-manual { background: var(--neutral-bg); color: var(--neutral); }
+@media (max-width: 700px) { .mcgrid, .mcrow, .mcrow.mcstep { grid-template-columns: 1fr; } }
+
+/* Warning when the browser storage refuses to save */
+.persistwarn { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 16px; padding: 12px 16px; border: 1px solid var(--bad); border-left-width: 4px; border-radius: 8px; background: var(--bad-bg); color: var(--bad); font-size: 14px; line-height: 1.5; }
+.persistwarn svg { flex-shrink: 0; margin-top: 2px; }

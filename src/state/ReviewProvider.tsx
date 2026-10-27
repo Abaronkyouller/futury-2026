@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
-import { AI_MODEL, DEFAULT_SETTINGS, STORAGE_KEY } from "../config/ai";
+import { AI_MODEL, DEFAULT_SETTINGS, REPORTS_STORAGE_KEY, STORAGE_KEY } from "../config/ai";
 import { initial as sampleRequirements } from "../data/requirements";
 import type { Req } from "../types/requirement";
 import type { ChangeLogEntry, GeneratedTestCase, GenerationSettings } from "../types/review";
@@ -10,6 +10,7 @@ import { sanitizeCaseTitle } from "../utils/caseText";
 import { redistributePriorities } from "../utils/priority";
 import type { ComparisonFeedback, ResultComparison } from "../types/validation";
 import { normalizeComparison } from "../ai/compare";
+import type { TestReport } from "../types/testReport";
 
 const PRIORITY_ASSIGNMENT_VERSION = 1;
 
@@ -65,7 +66,7 @@ function load(): ReviewState {
       feedbackExcluded: parsed.feedbackExcluded ?? [],
       ruleChanges: parsed.ruleChanges ?? [],
       ruleChangeRuns: parsed.ruleChangeRuns ?? [],
-      testReports: parsed.testReports ?? [],
+      testReports: loadReports() ?? parsed.testReports ?? [],
       priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
     };
   } catch {
@@ -73,12 +74,50 @@ function load(): ReviewState {
   }
 }
 
-function save(state: ReviewState) {
+/** Test reports from their own storage entry; undefined if there is none (older data). */
+function loadReports(): TestReport[] | undefined {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const raw = localStorage.getItem(REPORTS_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as TestReport[]) : undefined;
   } catch {
-    // Persistence is a convenience only; the app keeps working in memory.
+    return undefined;
   }
+}
+
+/**
+ * Writes the state to localStorage; returns false if the browser refused
+ * (storage full or blocked). The per-case `trace` is not stored: it is large
+ * (about two thirds of a case) and is rebuilt from the case and its
+ * requirement when needed (GeneratedCaseCard). Test reports are additionally
+ * stored in their own small entry, so the Software list survives even when the
+ * main store is too big.
+ */
+/** Save status as a tiny external store, so the provider can show it without setState in an effect. */
+let persistFailedNow = false;
+const persistListeners = new Set<() => void>();
+const subscribePersist = (fn: () => void) => { persistListeners.add(fn); return () => { persistListeners.delete(fn); }; };
+const getPersistFailed = () => persistFailedNow;
+function setPersistFailed(failed: boolean) {
+  if (failed === persistFailedNow) return;
+  persistFailedNow = failed;
+  persistListeners.forEach((fn) => fn());
+}
+
+function save(state: ReviewState): boolean {
+  let ok = true;
+  try {
+    localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(state.testReports));
+  } catch {
+    ok = false;
+  }
+  try {
+    const slim = { ...state, cases: state.cases.map(({ trace: _trace, ...c }) => c) };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
+  } catch {
+    ok = false;
+  }
+  setPersistFailed(!ok);
+  return ok;
 }
 
 let entryCounter = 0;
@@ -124,8 +163,10 @@ const describeReq = (r: Req) => `${r.status}${r.comment ? ` · "${r.comment}"` :
  */
 export function ReviewProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ReviewState>(load);
+  const persistFailed = useSyncExternalStore(subscribePersist, getPersistFailed);
 
-  useEffect(() => save(state), [state]);
+  // Saving is a side effect of every state change; a failure is shown to the user (App banner).
+  useEffect(() => { save(state); }, [state]);
 
   const logEvent = useCallback<ReviewStore["logEvent"]>((kind, fields) => {
     setState((s) => ({ ...s, changelog: [...s.changelog, entry({ kind, ...fields })] }));
@@ -411,8 +452,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const store = useMemo<ReviewStore>(
-    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, saveTestReport, deleteTestReport, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, recordRuleChanges, updateSettings, resetCases, logEvent }),
-    [state, recordRuleChanges, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, saveTestReport, deleteTestReport, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
+    () => ({ ...state, persistFailed, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, saveTestReport, deleteTestReport, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, recordRuleChanges, updateSettings, resetCases, logEvent }),
+    [state, persistFailed, recordRuleChanges, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, saveTestReport, deleteTestReport, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
   );
 
   return <ReviewContext.Provider value={store}>{children}</ReviewContext.Provider>;

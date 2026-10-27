@@ -82,7 +82,7 @@ export function CaseTraceSection({ req, testCase, sampleId, graph, open, onToggl
         <div className="tracebody">
           <p className="tracelead">
             {testCase
-              ? <>Dieser Testfall wurde {testCase.origin.kind === "model" ? `von der KI (${testCase.origin.model})` : testCase.origin.kind === "regelbasiert" ? "regelbasiert ohne KI" : "als Offline-Demo"} aus {o ? <b>{o.documentName}, {o.sectionLabel}</b> : "Beispieldaten"} erzeugt.{" "}
+              ? <>Dieser Testfall wurde {testCase.origin.kind === "model" ? `von der KI (${testCase.origin.model})` : testCase.origin.kind === "regelbasiert" ? "regelbasiert ohne KI" : testCase.origin.kind === "manuell" ? "manuell vom Prüfer" : "als Offline-Demo"} aus {o ? <b>{o.documentName}, {o.sectionLabel}</b> : "Beispieldaten"} erzeugt.{" "}
                   {graph.focusId === id && graph.claims.total > 0 && <>{graph.claims.backed} von {graph.claims.total} Aussagen finden sich in der Quelle oder in den Testdaten wieder.</>}</>
               : "Illustratives Beispiel ohne Originaltext und ohne Begründung eines Modells."}
           </p>

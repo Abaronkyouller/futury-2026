@@ -28,6 +28,8 @@ export const OPEN_VALUE_MARKER = "[offen – Regel nicht bestätigt]";
 
 /** localStorage key for generated cases, reviews and the change log (per browser only). */
 export const STORAGE_KEY = "futury-review-store-v1";
+/** Separate, small copy of the saved test reports (Testbericht / Software), so they survive even if the main store cannot be written. */
+export const REPORTS_STORAGE_KEY = "futury-test-reports-v1";
 
 export const DEFAULT_SETTINGS: GenerationSettings = {
   model: AI_MODEL,

@@ -14,6 +14,7 @@ import { CoveragePage } from "./pages/CoveragePage";
 import { ReviewProvider } from "./state/ReviewProvider";
 import { DocumentProvider } from "./state/DocumentProvider";
 import { ConfirmProvider } from "./components/ConfirmDialog";
+import { PersistBanner } from "./components/PersistBanner";
 
 export function App() {
   return (
@@ -25,6 +26,7 @@ export function App() {
           <div className="layout">
             <Sidebar />
             <main>
+              <PersistBanner />
               <Routes>
                 <Route path="/" element={<Overview />} />
                 <Route path="/documents" element={<DocumentsPage />} />

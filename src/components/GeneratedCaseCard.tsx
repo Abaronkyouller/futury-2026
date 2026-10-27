@@ -28,6 +28,7 @@ const ORIGIN_CLASS: Record<OriginKind, string> = {
   model: "origin-ai",
   regelbasiert: "origin-rule",
   "offline-demo": "origin-demo",
+  manuell: "origin-manual",
 };
 
 export function PriorityBadge({ value }: { value: Priority }) {
