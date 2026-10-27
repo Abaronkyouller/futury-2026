@@ -10,6 +10,7 @@ import { FEEDBACK_EXAMPLES_MAX, MAX_CASES_LIMIT } from "../config/ai";
 import { PRIORITIES, PRIORITY_FOCUSES, TECHNIQUES } from "../types/review";
 import type { GenerationSettings, OriginKind, Technique } from "../types/review";
 import { buildMessages } from "../ai/prompt";
+import { activeNotes, selectGenerationFeedback } from "../feedback/collect";
 import { useReviewStore } from "../state/reviewContext";
 import { useGeneration } from "../state/useGeneration";
 
@@ -36,9 +37,12 @@ export function Generator() {
   const [rawReply, setRawReply] = useState("");
   const [showReasoning, setShowReasoning] = useState(true);
 
-  const reviewed = store.cases.filter((c) => c.review.decision !== "Offen");
+  const allReviewed = store.cases.filter((c) => c.review.decision !== "Offen");
+  // Same selection as a real run (useGeneration): relevant active feedback plus maintainer notes.
+  const reviewed = selectGenerationFeedback(store.cases, req, store.requirements, store.feedbackExcluded);
+  const notes = activeNotes(store.feedbackNotes, store.feedbackExcluded, "Generierung");
   // Exact prompt preview; cheap to rebuild on every render.
-  const messages = buildMessages(req, draft, reviewed);
+  const messages = buildMessages(req, draft, reviewed, notes);
 
   const reqCases = store.cases
     .filter((c) => c.requirementId === req.id)
@@ -145,7 +149,7 @@ export function Generator() {
           </label>
           <label className="checkrow">
             <input type="checkbox" checked={draft.useFeedback} onChange={(e) => set("useFeedback", e.target.checked)} />
-            Aus meinen Rückmeldungen lernen ({Math.min(reviewed.length, FEEDBACK_EXAMPLES_MAX)} von {reviewed.length} bewerteten Fällen gehen in den Prompt ein)
+            Aus der <Link to="/feedback">Feedback-Datenbank</Link> lernen ({reviewed.length} von {allReviewed.length} bewerteten Fällen, max. {FEEDBACK_EXAMPLES_MAX}, ähnlichste zuerst, plus {notes.length} Hinweis(e))
           </label>
 
           <div className="actions spaced">

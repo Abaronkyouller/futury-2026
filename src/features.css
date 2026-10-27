@@ -262,3 +262,15 @@ table.cmp tbody tr.disagree td, table.cmp tbody tr.disagree th { background: var
 .combotag { font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 7px; background: var(--source-bg); color: var(--source); }
 .comboempty { color: var(--muted); cursor: default; }
 .reasons li { margin-bottom: 6px; line-height: 1.6; }
+
+/* ---------- Feedback-Datenbank ---------- */
+.kind-feedback { background: var(--assumption-bg); color: var(--assumption); }
+.nowrap { white-space: nowrap; }
+.feedbacktable td { vertical-align: top; }
+.feedbacktable tbody tr { cursor: default; }
+.feedbacktable tr.inactive td { opacity: 0.5; }
+.feedbacktable tr.inactive td:nth-last-child(2) { opacity: 1; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.noteform { margin-top: 16px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 16px; background: var(--surface-2); }
+.noteform h4 { margin: 0 0 6px; }
+.noteform select, .textinput { padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }

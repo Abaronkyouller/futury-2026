@@ -21,6 +21,7 @@ import type {
 } from "../types/validation";
 import { MODEL_RATINGS } from "../types/validation";
 import { visibleFields } from "../utils/caseText";
+import { buildNotesBlock } from "../feedback/collect";
 import { chatCompletion } from "./client";
 import { newRunId } from "./generate";
 import { extractJson, isObj, str } from "./parse";
@@ -125,9 +126,14 @@ function caseBlock(c: GeneratedTestCase, expected: ExpectedField[]): string[] {
   ];
 }
 
-export function buildCompareMessages(c: GeneratedTestCase, result: PayrollResult, history: ResultComparison[]): ChatMessage[] {
+export function buildCompareMessages(
+  c: GeneratedTestCase,
+  result: PayrollResult,
+  history: ResultComparison[],
+  notes: string[] = [],
+): ChatMessage[] {
   const expected = expectedOf(c);
-  const feedback = buildCompareFeedbackBlock(history);
+  const feedback = [buildCompareFeedbackBlock(history), buildNotesBlock(notes)].filter(Boolean).join("\n\n");
   const user = [
     ...caseBlock(c, expected),
     "",
@@ -290,13 +296,15 @@ export type CompareInput = {
   result: PayrollResult;
   /** All earlier comparisons; those with examiner feedback are fed into the prompt. */
   history: ResultComparison[];
+  /** Active maintainer notes for comparisons (Feedback page). */
+  notes?: string[];
 };
 
 /** Runs the model and the rule-based reference and assembles the comparison. */
-export async function compareResult({ testCase, result, history }: CompareInput): Promise<ResultComparison> {
+export async function compareResult({ testCase, result, history, notes = [] }: CompareInput): Promise<ResultComparison> {
   const expected = expectedOf(testCase);
   if (expected.length === 0) throw new Error(`Testfall ${testCase.id} hat kein erwartetes Ergebnis – ein Abgleich ist nicht möglich.`);
-  const messages = buildCompareMessages(testCase, result, history);
+  const messages = buildCompareMessages(testCase, result, history, notes);
   const ki = await assessWithModel(COMPARE_MODEL.label, COMPARE_MODEL.model, messages, expected, result.text);
   const rule = ruleAssessment(expected, result.text);
   const now = new Date();

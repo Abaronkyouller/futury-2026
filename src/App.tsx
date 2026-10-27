@@ -7,6 +7,7 @@ import { Generator } from "./pages/Generator";
 import { Validation } from "./pages/Validation";
 import { GraphPage } from "./pages/GraphPage";
 import { ChangeLog } from "./pages/ChangeLog";
+import { FeedbackPage } from "./pages/FeedbackPage";
 import { ReviewProvider } from "./state/ReviewProvider";
 import { DocumentProvider } from "./state/DocumentProvider";
 
@@ -29,6 +30,7 @@ export function App() {
                 <Route path="/tests" element={<Tests />} />
                 <Route path="/validation" element={<Validation />} />
                 <Route path="/graph" element={<GraphPage />} />
+                <Route path="/feedback" element={<FeedbackPage />} />
                 <Route path="/changelog" element={<ChangeLog />} />
                 <Route path="*" element={<Overview />} />
               </Routes>

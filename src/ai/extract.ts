@@ -13,6 +13,7 @@ import { quoteOccursIn, truncate } from "../documents/text";
 import type { DocSection, SourceDocument } from "../types/document";
 import type { ExtractionMethod, Req, RequirementOrigin } from "../types/requirement";
 import { chatCompletion } from "./client";
+import { isActive } from "../feedback/collect";
 import { newRunId } from "./generate";
 import { extractJson, isObj, str, strList } from "./parse";
 import type { ChatMessage } from "./prompt";
@@ -63,6 +64,8 @@ export type ExtractionInput = {
   temperature: number;
   /** Requirements already extracted from this document; used for numbering and feedback. */
   existing: Req[];
+  /** Feedback entries switched off on the Feedback page; their comments are not sent. */
+  feedbackExcluded?: readonly string[];
 };
 
 export type ExtractionRun = {
@@ -105,8 +108,8 @@ export function sectionBatches(sections: DocSection[], budget = EXTRACTION_CHAR_
 }
 
 /** Examiner decisions on earlier extractions from the same document (in-context feedback). */
-function feedbackBlock(existing: Req[]): string {
-  const reviewed = existing.filter((r) => r.status !== "Offen" || r.comment);
+function feedbackBlock(existing: Req[], excluded: readonly string[]): string {
+  const reviewed = existing.filter((r) => (r.status !== "Offen" || r.comment) && isActive(r.id, excluded));
   if (reviewed.length === 0) return "";
   const lines = reviewed
     .slice(-6)
@@ -121,7 +124,7 @@ export function buildExtractionMessages(input: ExtractionInput): ChatMessage[] {
     `Dokument: ${doc.name}`,
     `Dokumentart: ${doc.classification.kind} · ${versionLabel(doc)}`,
     `Fokus des Prüfers: ${focus.trim() || "alle prüfbaren Anforderungen"}`,
-    `Extrahiere höchstens ${MAX_REQUIREMENTS_PER_RUN} Anforderungen.${feedbackBlock(existing)}`,
+    `Extrahiere höchstens ${MAX_REQUIREMENTS_PER_RUN} Anforderungen.${feedbackBlock(existing, input.feedbackExcluded ?? [])}`,
     "",
     "Abschnitte:",
     ...sections.map((s) => `[${s.id}] ${sectionLabel(s)}\n"""\n${s.text}\n"""`),

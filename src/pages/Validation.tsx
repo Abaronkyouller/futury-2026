@@ -12,6 +12,7 @@ import { RESULT_FILE_TYPES } from "../config/validation";
 import { compareResult, suggestCases } from "../ai/compare";
 import { useReviewStore } from "../state/reviewContext";
 import { useResults } from "../state/useResults";
+import { activeNotes, isActive } from "../feedback/collect";
 import type { OverallVerdict, ResultComparison } from "../types/validation";
 import { download } from "../utils/download";
 import { formatDateTime, toCsv } from "../utils/format";
@@ -100,7 +101,13 @@ export function Validation() {
     setBusy(true);
     setError("");
     try {
-      const comparison = await compareResult({ testCase, result, history: comparisons });
+      const comparison = await compareResult({
+        testCase,
+        result,
+        // Feedback database: only decisions that are switched on, plus maintainer notes.
+        history: comparisons.filter((c) => isActive(c.id, store.feedbackExcluded)),
+        notes: activeNotes(store.feedbackNotes, store.feedbackExcluded, "Abgleich"),
+      });
       store.addComparison(comparison);
       setSelectedComparison(comparison.id);
       const failed = comparison.assessments.filter((a) => !a.ok);

@@ -16,6 +16,7 @@ const KIND_CLASS: Record<ChangeKind, string> = {
   Generierung: "kind-gen",
   Prüfung: "kind-review",
   Validierung: "kind-validation",
+  Feedback: "kind-feedback",
   Einstellungen: "kind-settings",
   Zurücksetzen: "kind-reset",
 };

@@ -34,6 +34,7 @@ async function produce(
   settings: GenerationSettings,
   reviewed: GeneratedTestCase[],
   kind: OriginKind,
+  notes: string[],
 ): Promise<{ raw: RawCase[]; rawReply: string }> {
   if (kind === "regelbasiert") {
     const raw = deriveRuleCases(req, settings);
@@ -48,7 +49,7 @@ async function produce(
   }
   const rawReply =
     kind === "model"
-      ? await chatCompletion(settings.model, buildMessages(req, settings, reviewed), settings.temperature)
+      ? await chatCompletion(settings.model, buildMessages(req, settings, reviewed, notes), settings.temperature)
       : offlineDemoReply(req);
   return { raw: parseCases(rawReply).slice(0, settings.maxCases), rawReply };
 }
@@ -62,8 +63,10 @@ export async function generateTestCases(
   settings: GenerationSettings,
   reviewed: GeneratedTestCase[],
   kind: OriginKind,
+  /** Active maintainer notes for generation (Feedback page). */
+  notes: string[] = [],
 ): Promise<GenerationRun> {
-  const { raw, rawReply } = await produce(req, settings, reviewed, kind);
+  const { raw, rawReply } = await produce(req, settings, reviewed, kind, notes);
 
   const now = new Date();
   const runId = newRunId(now);

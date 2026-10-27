@@ -144,6 +144,7 @@ export const CHANGE_KINDS = [
   "Generierung",
   "Prüfung",
   "Validierung",
+  "Feedback",
   "Einstellungen",
   "Zurücksetzen",
 ] as const;

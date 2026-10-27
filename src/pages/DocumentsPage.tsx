@@ -160,13 +160,13 @@ function Workspace({ doc }: { doc: SourceDocument }) {
     for (const [index, sections] of batches.entries()) {
       setPhase(`Alle Abschnitte analysieren: Paket ${index + 1}/${batches.length} …`);
       try {
-        const run = await extractRequirements({ doc, sections, focus: "", method: "model", model: AI_MODEL, temperature: EXTRACTION_TEMPERATURE, existing: [...docReqs, ...extracted] });
+        const run = await extractRequirements({ doc, sections, focus: "", method: "model", model: AI_MODEL, temperature: EXTRACTION_TEMPERATURE, existing: [...docReqs, ...extracted], feedbackExcluded: store.feedbackExcluded });
         extracted.push(...run.requirements);
         store.addRequirements(doc.name, run.runId, "model", run.requirements);
       } catch (modelError) {
         setWarnings((x) => [...x, `KI-Extraktion in Paket ${index + 1} fehlgeschlagen: ${(modelError as Error).message}`]);
         try {
-          const run = await extractRequirements({ doc, sections, focus: "", method: "regelbasiert", model: AI_MODEL, temperature: EXTRACTION_TEMPERATURE, existing: [...docReqs, ...extracted] });
+          const run = await extractRequirements({ doc, sections, focus: "", method: "regelbasiert", model: AI_MODEL, temperature: EXTRACTION_TEMPERATURE, existing: [...docReqs, ...extracted], feedbackExcluded: store.feedbackExcluded });
           extracted.push(...run.requirements);
           store.addRequirements(doc.name, run.runId, "regelbasiert", run.requirements);
         } catch {

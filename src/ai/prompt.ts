@@ -3,6 +3,7 @@ import type { GeneratedTestCase, GenerationSettings } from "../types/review";
 import { FEEDBACK_EXAMPLES_MAX, OPEN_VALUE_MARKER } from "../config/ai";
 import { GENERATION_CONTEXT_CHARS } from "../config/documents";
 import { truncate } from "../documents/text";
+import { buildNotesBlock } from "../feedback/collect";
 
 /** OpenAI-compatible chat message. */
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -57,6 +58,7 @@ const FOCUS_TEXT: Record<GenerationSettings["priorityFocus"], string> = {
  * the model sees the feedback in the prompt; no weights are changed.
  */
 export function buildFeedbackBlock(reviewed: GeneratedTestCase[]): string {
+  // Callers pass a relevance-ranked selection (feedback/collect.ts); the cap is a safety net.
   const examples = reviewed
     .filter((c) => c.review.decision !== "Offen")
     .slice(-FEEDBACK_EXAMPLES_MAX);
@@ -118,9 +120,11 @@ export function buildMessages(
   req: Req,
   settings: GenerationSettings,
   reviewed: GeneratedTestCase[],
+  /** Active maintainer notes for generation (Feedback page). */
+  notes: string[] = [],
 ): ChatMessage[] {
   const steps = settings.reasoningDetail === "kurz" ? "1 bis 3" : "3 bis 6";
-  const feedback = settings.useFeedback ? buildFeedbackBlock(reviewed) : "";
+  const feedback = settings.useFeedback ? [buildFeedbackBlock(reviewed), buildNotesBlock(notes)].filter(Boolean).join("\n\n") : "";
   const user = [
     ...(req.origin ? sourceBlock(req) : sampleBlock(req)),
     "",

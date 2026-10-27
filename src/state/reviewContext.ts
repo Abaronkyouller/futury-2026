@@ -8,6 +8,7 @@ import type {
   ReviewDecision,
 } from "../types/review";
 import type { ComparisonFeedback, ResultComparison } from "../types/validation";
+import type { MaintainerNote, NoteScope } from "../types/feedback";
 
 /** Persisted part of the review state (localStorage, this browser only). */
 export type ReviewState = {
@@ -18,6 +19,10 @@ export type ReviewState = {
   settings: GenerationSettings;
   /** Comparisons of imported payroll results with test cases (Validierung & Bericht). */
   comparisons: ResultComparison[];
+  /** Free guidance by examiners/maintainers (Feedback page). */
+  feedbackNotes: MaintainerNote[];
+  /** Feedback entries switched off on the Feedback page; they reach no prompt. */
+  feedbackExcluded: string[];
   /** Version marker for one-time migrations of persisted priority assignments. */
   priorityAssignmentVersion: number;
 };
@@ -40,6 +45,12 @@ export type ReviewStore = ReviewState & {
   addComparison: (comparison: ResultComparison) => void;
   /** Records the examiner's binding verdict on a comparison; the previous value is logged. */
   reviewComparison: (id: string, feedback: ComparisonFeedback) => void;
+  /** Adds a maintainer note that is fed into the chosen prompts. */
+  addFeedbackNote: (scope: NoteScope, text: string, author: string) => void;
+  /** Deletes a maintainer note (derived entries can only be switched off). */
+  removeFeedbackNote: (id: string) => void;
+  /** Switches a feedback entry on or off for future prompts; logged. */
+  setFeedbackActive: (entryId: string, active: boolean, label: string) => void;
   /** Updates generation settings and logs what changed. */
   updateSettings: (next: GenerationSettings) => void;
   /** Removes all generated cases and feedback; the reset itself is logged. */

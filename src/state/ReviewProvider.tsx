@@ -19,6 +19,8 @@ const EMPTY: ReviewState = {
   changelog: [],
   settings: DEFAULT_SETTINGS,
   comparisons: [],
+  feedbackNotes: [],
+  feedbackExcluded: [],
   priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
 };
 
@@ -56,6 +58,8 @@ function load(): ReviewState {
       changelog: parsed.changelog ?? [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings, model: AI_MODEL },
       comparisons: (parsed.comparisons ?? []).map(normalizeComparison),
+      feedbackNotes: parsed.feedbackNotes ?? [],
+      feedbackExcluded: parsed.feedbackExcluded ?? [],
       priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
     };
   } catch {
@@ -268,6 +272,45 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const addFeedbackNote = useCallback<ReviewStore["addFeedbackNote"]>((scope, text, author) => {
+    const clean = text.trim();
+    if (!clean) return;
+    const note = { id: `HW-${Date.now()}`, createdAt: new Date().toISOString(), scope, text: clean, author: author.trim() || "Prüfer/in" };
+    setState((s) => ({
+      ...s,
+      feedbackNotes: [...s.feedbackNotes, note],
+      changelog: [...s.changelog, entry({ kind: "Feedback", summary: `Hinweis ${note.id} für „${scope}“ hinzugefügt`, after: `${note.text} (${note.author})` })],
+    }));
+  }, []);
+
+  const removeFeedbackNote = useCallback<ReviewStore["removeFeedbackNote"]>((id) => {
+    setState((s) => {
+      const note = s.feedbackNotes.find((n) => n.id === id);
+      if (!note) return s;
+      return {
+        ...s,
+        feedbackNotes: s.feedbackNotes.filter((n) => n.id !== id),
+        feedbackExcluded: s.feedbackExcluded.filter((x) => x !== id),
+        changelog: [...s.changelog, entry({ kind: "Feedback", summary: `Hinweis ${id} gelöscht`, before: `${note.text} (${note.scope})` })],
+      };
+    });
+  }, []);
+
+  const setFeedbackActive = useCallback<ReviewStore["setFeedbackActive"]>((entryId, active, label) => {
+    setState((s) => {
+      const isOff = s.feedbackExcluded.includes(entryId);
+      if (isOff === !active) return s;
+      return {
+        ...s,
+        feedbackExcluded: active ? s.feedbackExcluded.filter((x) => x !== entryId) : [...s.feedbackExcluded, entryId],
+        changelog: [
+          ...s.changelog,
+          entry({ kind: "Feedback", summary: `Feedback ${entryId} ${active ? "aktiviert" : "deaktiviert"}`, before: active ? "inaktiv" : "aktiv", after: `${active ? "aktiv" : "inaktiv"} · ${label}` }),
+        ],
+      };
+    });
+  }, []);
+
   const updateSettings = useCallback<ReviewStore["updateSettings"]>((next) => {
     setState((s) => {
       const changes = diffSettings(s.settings, next);
@@ -299,8 +342,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const store = useMemo<ReviewStore>(
-    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, updateSettings, resetCases, logEvent }),
-    [state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, updateSettings, resetCases, logEvent],
+    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent }),
+    [state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
   );
 
   return <ReviewContext.Provider value={store}>{children}</ReviewContext.Provider>;

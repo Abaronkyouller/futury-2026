@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Network,
   History,
+  MessageSquare,
 } from "lucide-react";
 
 /** Navigation entries; `section` starts a labelled group. Keep in sync with routes in App.tsx. */
@@ -19,6 +20,7 @@ const LINKS = [
   { path: "/tests", label: "Testfälle", Icon: FlaskConical },
   { path: "/validation", label: "Validierung & Bericht", Icon: CheckCircle2 },
   { path: "/graph", label: "Nachverfolgbarkeit", Icon: Network, section: "NACHWEIS" },
+  { path: "/feedback", label: "Feedback", Icon: MessageSquare },
   { path: "/changelog", label: "Änderungsprotokoll", Icon: History },
 ] as const;
 

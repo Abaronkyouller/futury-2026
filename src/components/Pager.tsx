@@ -9,13 +9,26 @@ function pageNumbers(page: number, pageCount: number, windowSize = 5): (number |
 }
 
 /** Reusable numbered pagination for test-case lists. */
-export function Pager({ page, pageCount, total, onPage }: { page: number; pageCount: number; total: number; onPage: (page: number) => void }) {
+export function Pager({
+  page,
+  pageCount,
+  total,
+  onPage,
+  unit = "Testfall/Testfälle",
+}: {
+  page: number;
+  pageCount: number;
+  total: number;
+  onPage: (page: number) => void;
+  /** Label of the counted items in the info text. */
+  unit?: string;
+}) {
   return <nav className="pager" aria-label="Seitennavigation">
     <button disabled={page <= 1} onClick={() => onPage(page - 1)}>←</button>
     {pageNumbers(page, pageCount).map((value, index) => value === null
       ? <span key={`gap-${index}`} className="gap">…</span>
       : <button key={value} className={value === page ? "active" : ""} aria-current={value === page ? "page" : undefined} onClick={() => onPage(value)}>{value}</button>)}
     <button disabled={page >= pageCount} onClick={() => onPage(page + 1)}>→</button>
-    <span className="pagerinfo">Seite {page} von {pageCount} · {total} Testfall/Testfälle</span>
+    <span className="pagerinfo">Seite {page} von {pageCount} · {total} {unit}</span>
   </nav>;
 }
