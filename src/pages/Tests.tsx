@@ -20,6 +20,7 @@ const TESTS_PER_PAGE = 10;
 const KIND_CLASS: Record<ChangeKind, string> = {
   Dokument: "kind-doc",
   Extraktion: "kind-extract",
+  Regeländerung: "kind-rulechange",
   Anforderung: "kind-req",
   Generierung: "kind-gen",
   Prüfung: "kind-review",

@@ -70,4 +70,10 @@ export type SourceDocument = {
   charCount: number;
   /** Extraction notes the examiner should see (e.g. pages without text). */
   warnings: string[];
+  /**
+   * Earlier version of the same specification, used by the change log
+   * (Änderungsprotokoll → Regeln). Detected from the file name on upload,
+   * changeable on the document card; undefined for a first version.
+   */
+  predecessorId?: string;
 };

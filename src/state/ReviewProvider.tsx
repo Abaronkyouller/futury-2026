@@ -21,6 +21,8 @@ const EMPTY: ReviewState = {
   comparisons: [],
   feedbackNotes: [],
   feedbackExcluded: [],
+  ruleChanges: [],
+  ruleChangeRuns: [],
   priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
 };
 
@@ -60,6 +62,8 @@ function load(): ReviewState {
       comparisons: (parsed.comparisons ?? []).map(normalizeComparison),
       feedbackNotes: parsed.feedbackNotes ?? [],
       feedbackExcluded: parsed.feedbackExcluded ?? [],
+      ruleChanges: parsed.ruleChanges ?? [],
+      ruleChangeRuns: parsed.ruleChangeRuns ?? [],
       priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
     };
   } catch {
@@ -311,6 +315,26 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const recordRuleChanges = useCallback<ReviewStore["recordRuleChanges"]>((run, changes) => {
+    const c = run.counts;
+    setState((s) => ({
+      ...s,
+      ruleChangeRuns: [...s.ruleChangeRuns, run],
+      ruleChanges: [...s.ruleChanges, ...changes],
+      changelog: [
+        ...s.changelog,
+        entry({
+          kind: "Regeländerung",
+          summary: run.predecessorName
+            ? `„${run.documentName}“ mit Vorgängerversion „${run.predecessorName}“ verglichen: ${c.geaendert} geändert, ${c.neu} neu, ${c.entfallen} entfallen, ${c.unveraendert} unverändert`
+            : `„${run.documentName}“: ${run.note ?? "kein Vergleich"}`,
+          before: run.predecessorVersion,
+          after: changes.map((x) => `${x.kind}: ${x.rule}${x.differences.length ? ` (${x.differences.join("; ")})` : ""}`).join("\n") || undefined,
+        }),
+      ],
+    }));
+  }, []);
+
   const updateSettings = useCallback<ReviewStore["updateSettings"]>((next) => {
     setState((s) => {
       const changes = diffSettings(s.settings, next);
@@ -342,8 +366,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const store = useMemo<ReviewStore>(
-    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent }),
-    [state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
+    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, recordRuleChanges, updateSettings, resetCases, logEvent }),
+    [state, recordRuleChanges, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
   );
 
   return <ReviewContext.Provider value={store}>{children}</ReviewContext.Provider>;

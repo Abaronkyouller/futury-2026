@@ -274,3 +274,21 @@ table.cmp tbody tr.disagree td, table.cmp tbody tr.disagree th { background: var
 .noteform { margin-top: 16px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 16px; background: var(--surface-2); }
 .noteform h4 { margin: 0 0 6px; }
 .noteform select, .textinput { padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+
+/* ---------- Änderungsprotokoll ---------- */
+.kind-rulechange { background: var(--warn-bg); color: var(--warn); }
+.viewswitch { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 18px; }
+.viewswitch button { display: flex; align-items: flex-start; gap: 12px; text-align: left; padding: 14px 16px; border-radius: 10px; font-weight: 400; }
+.viewswitch button b, .viewswitch button small { display: block; }
+.viewswitch button small { color: var(--muted); margin-top: 3px; font-size: 12px; }
+.viewswitch button.selected { border-color: var(--primary-ink); box-shadow: 0 0 0 2px var(--primary-soft); background: var(--surface); }
+.changetable td { vertical-align: top; }
+.changetable tr.detailrow { cursor: default; }
+.changetable tr.detailrow td { background: var(--surface-2); }
+.beforeafter .minihead { margin: 4px 0; }
+.quotediff { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 7px; padding: 12px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+.quotediff del, .beforeafter del { background: var(--bad-bg); color: var(--bad); }
+.quotediff ins, .beforeafter ins { background: var(--good-bg); color: var(--good); text-decoration: underline; }
+.quotediff.allnew { border-left: 4px solid var(--good); }
+.quotediff.allgone { border-left: 4px solid var(--bad); text-decoration: line-through; color: var(--muted); }
+@media (max-width: 900px) { .viewswitch { grid-template-columns: 1fr; } }

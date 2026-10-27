@@ -13,6 +13,8 @@ export type DocumentStore = {
   removeDocument: (id: string) => void;
   /** Sets the role of a document (Spezifikation / Technische Informationen). */
   setRole: (id: string, role: DocRole) => void;
+  /** Sets (or clears) the predecessor version of a document. */
+  setPredecessor: (id: string, predecessorId: string | undefined) => void;
 };
 
 export const DocumentContext = createContext<DocumentStore | null>(null);

@@ -15,8 +15,8 @@ import {
 /** Navigation entries; `section` starts a labelled group. Keep in sync with routes in App.tsx. */
 const LINKS = [
   { path: "/", label: "Übersicht", Icon: LayoutDashboard },
-  { path: "/documents", label: "Dokumente & Testfälle", Icon: FileUp, section: "ABLAUF" },
-  { path: "/generate", label: "Testfall-Generator", Icon: Sparkles },
+  { path: "/documents", label: "Testfall-Generator", Icon: FileUp, section: "ABLAUF" },
+  // { path: "/generate", label: "Einstellung", Icon: Sparkles },
   { path: "/tests", label: "Testfälle", Icon: FlaskConical },
   { path: "/validation", label: "Validierung & Bericht", Icon: CheckCircle2 },
   { path: "/graph", label: "Nachverfolgbarkeit", Icon: Network, section: "NACHWEIS" },

@@ -140,6 +140,7 @@ export type GenerationSettings = {
 export const CHANGE_KINDS = [
   "Dokument",
   "Extraktion",
+  "Regeländerung",
   "Anforderung",
   "Generierung",
   "Prüfung",

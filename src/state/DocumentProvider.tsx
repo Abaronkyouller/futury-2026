@@ -8,6 +8,7 @@ import type { DocRole, SourceDocument } from "../types/document";
 import { DocumentContext } from "./documentContext";
 import type { DocumentStore } from "./documentContext";
 import { useReviewStore } from "./reviewContext";
+import { findPredecessor } from "../changes/ruleDiff";
 
 const STORAGE_WARNING =
   "Dokumente können in diesem Browser nicht dauerhaft gespeichert werden (IndexedDB nicht verfügbar). Sie bleiben nur bis zum Neuladen erhalten.";
@@ -64,15 +65,20 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     async (files, onProgress) => {
       const added: SourceDocument[] = [];
       const errors: string[] = [];
+      // Documents known so far, so a predecessor uploaded in the same batch is found too.
+      const known = [...documents];
       // Sequential: PDF parsing is CPU-heavy and progress stays readable.
       for (const file of files) {
         try {
-          const doc = await ingestFile(file, (p) => onProgress(file.name, p));
+          const read = await ingestFile(file, (p) => onProgress(file.name, p));
+          const predecessor = findPredecessor(read, known);
+          const doc = { ...read, predecessorId: predecessor?.id };
+          known.push(doc);
           added.push(doc);
           persist(doc);
           setDocuments((d) => [...d, doc]);
           logEvent("Dokument", {
-            summary: `„${doc.name}“ hochgeladen: ${doc.sections.length} Abschnitte, Dokumentart ${doc.classification.kind}, Rolle ${doc.role}`,
+            summary: `„${doc.name}“ hochgeladen: ${doc.sections.length} Abschnitte, Dokumentart ${doc.classification.kind}, Rolle ${doc.role}${predecessor ? `, Vorgängerversion „${predecessor.name}“` : ""}`,
             after: `${versionLabel(doc)}${doc.warnings.length ? `\nHinweise: ${doc.warnings.join(" | ")}` : ""}`,
           });
         } catch (e) {
@@ -81,7 +87,7 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
       }
       return { added, errors };
     },
-    [logEvent, persist],
+    [documents, logEvent, persist],
   );
 
   const removeDocument = useCallback(
@@ -117,9 +123,20 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     [update],
   );
 
+  const setPredecessor = useCallback(
+    (id: string, predecessorId: string | undefined) =>
+      update(
+        id,
+        (d) => ({ ...d, predecessorId }),
+        (d) => documents.find((x) => x.id === d.predecessorId)?.name ?? "keine",
+        "Vorgängerversion",
+      ),
+    [update, documents],
+  );
+
   const store = useMemo<DocumentStore>(
-    () => ({ documents, ready, storageWarning, addFiles, removeDocument, setRole }),
-    [documents, ready, storageWarning, addFiles, removeDocument, setRole],
+    () => ({ documents, ready, storageWarning, addFiles, removeDocument, setRole, setPredecessor }),
+    [documents, ready, storageWarning, addFiles, removeDocument, setRole, setPredecessor],
   );
 
   return <DocumentContext.Provider value={store}>{children}</DocumentContext.Provider>;

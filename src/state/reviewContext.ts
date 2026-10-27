@@ -9,6 +9,7 @@ import type {
 } from "../types/review";
 import type { ComparisonFeedback, ResultComparison } from "../types/validation";
 import type { MaintainerNote, NoteScope } from "../types/feedback";
+import type { RuleChange, RuleChangeRun } from "../types/ruleChange";
 
 /** Persisted part of the review state (localStorage, this browser only). */
 export type ReviewState = {
@@ -23,6 +24,10 @@ export type ReviewState = {
   feedbackNotes: MaintainerNote[];
   /** Feedback entries switched off on the Feedback page; they reach no prompt. */
   feedbackExcluded: string[];
+  /** Detected changes of rules between document versions (Änderungsprotokoll → Regeln). */
+  ruleChanges: RuleChange[];
+  /** One entry per comparison of a document with its predecessor. */
+  ruleChangeRuns: RuleChangeRun[];
   /** Version marker for one-time migrations of persisted priority assignments. */
   priorityAssignmentVersion: number;
 };
@@ -51,6 +56,8 @@ export type ReviewStore = ReviewState & {
   removeFeedbackNote: (id: string) => void;
   /** Switches a feedback entry on or off for future prompts; logged. */
   setFeedbackActive: (entryId: string, active: boolean, label: string) => void;
+  /** Stores the result of comparing a document's rules with its predecessor; logged. */
+  recordRuleChanges: (run: RuleChangeRun, changes: RuleChange[]) => void;
   /** Updates generation settings and logs what changed. */
   updateSettings: (next: GenerationSettings) => void;
   /** Removes all generated cases and feedback; the reset itself is logged. */

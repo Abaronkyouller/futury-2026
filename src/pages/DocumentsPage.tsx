@@ -18,6 +18,7 @@ import type { DocKind, DocRole, SourceDocument } from "../types/document";
 import type { Req } from "../types/requirement";
 import type { GeneratedTestCase, Priority } from "../types/review";
 import { PRIORITIES } from "../types/review";
+import { detectRuleChanges } from "../changes/ruleDiff";
 
 const KIND_HINT: Record<DocKind, string> = {
   Fachlich: "Rechtliche/fachliche Vorgaben",
@@ -84,8 +85,30 @@ function UploadArea() {
   </>;
 }
 
+/**
+ * Compares the rules of a document with its predecessor version and stores
+ * the result (Änderungsprotokoll → Regeln & Spezifikationen).
+ */
+function useRuleComparison() {
+  const store = useReviewStore();
+  const { documents } = useDocuments();
+  return (doc: SourceDocument, newReqs: Req[]) => {
+    const predecessor = documents.find((d) => d.id === doc.predecessorId);
+    const oldReqs = predecessor ? store.requirements.filter((r) => r.origin?.documentId === predecessor.id) : [];
+    const { run, changes } = detectRuleChanges({ doc, predecessor, newReqs, oldReqs, cases: store.cases });
+    store.recordRuleChanges(run, changes);
+    return run;
+  };
+}
+
 function DocumentCard({ doc, active, caseCount, onSelect }: { doc: SourceDocument; active: boolean; caseCount: number; onSelect: () => void }) {
-  const { setRole, removeDocument } = useDocuments();
+  const { setRole, removeDocument, documents, setPredecessor } = useDocuments();
+  const { requirements } = useReviewStore();
+  const compare = useRuleComparison();
+  const [compareNote, setCompareNote] = useState("");
+  const candidates = documents.filter((d) => d.id !== doc.id);
+  const ownReqs = requirements.filter((r) => r.origin?.documentId === doc.id);
+  const predecessorAnalysed = requirements.some((r) => r.origin?.documentId === doc.predecessorId);
   return <div className={`doccard ${active ? "chosen" : ""}`}>
     <div className="paneltop">
       <button className="docname" onClick={onSelect}><FileText size={18} /><span><b>{doc.name}</b><small>{doc.format.toUpperCase()}{doc.pageCount ? ` · ${doc.pageCount} Seiten` : ""} · {doc.sections.length} Abschnitte · {fmt(doc.charCount)} Zeichen · {versionLabel(doc)}</small></span></button>
@@ -93,9 +116,22 @@ function DocumentCard({ doc, active, caseCount, onSelect }: { doc: SourceDocumen
     </div>
     <div className="docmeta">
       <label className="field inline">Rolle<select value={doc.role} onChange={(e) => setRole(doc.id, e.target.value as DocRole)}>{DOC_ROLES.map((r) => <option key={r}>{r}</option>)}</select></label>
+      <label className="field inline" title="Frühere Version dieser Spezifikation – Grundlage für das Änderungsprotokoll">Vorgängerversion
+        <select value={doc.predecessorId ?? ""} onChange={(e) => setPredecessor(doc.id, e.target.value || undefined)}>
+          <option value="">keine (Erstfassung)</option>
+          {candidates.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+      </label>
+      {doc.predecessorId && ownReqs.length > 0 && predecessorAnalysed && (
+        <button title="Regeln mit der Vorgängerversion vergleichen" onClick={() => {
+          const run = compare(doc, ownReqs);
+          setCompareNote(`${run.counts.geaendert} geändert · ${run.counts.neu} neu · ${run.counts.entfallen} entfallen – siehe Änderungsprotokoll`);
+        }}>Mit Vorgänger vergleichen</button>
+      )}
       <div className="actions"><button className={active ? "primary" : ""} onClick={onSelect}>{active ? "Ausgewählt" : "Bearbeiten"}</button><button title="Dokument entfernen" onClick={() => { if (window.confirm(`„${doc.name}“ entfernen? Bereits erzeugte Testfälle bleiben erhalten.`)) removeDocument(doc.id); }}><Trash2 size={15} /></button></div>
     </div>
     <p className="muted small">Dokumentart automatisch erkannt ({KIND_HINT[doc.classification.kind]}). {ROLE_HINT[doc.role]}.</p>
+    {compareNote && <p className="status good">{compareNote}</p>}
     {/* Technical running-header notices are intentionally not displayed. */}
     {doc.warnings.length > 0 && <ul className="warnings">{doc.warnings.map((w) => <li key={w}>⚠ {w}</li>)}</ul>}
   </div>;
@@ -104,6 +140,7 @@ function DocumentCard({ doc, active, caseCount, onSelect }: { doc: SourceDocumen
 function Workspace({ doc }: { doc: SourceDocument }) {
   const store = useReviewStore();
   const runGeneration = useGeneration();
+  const compareRules = useRuleComparison();
   const docReqs = useMemo(() => store.requirements.filter((r) => r.origin?.documentId === doc.id), [store.requirements, doc.id]);
   const ids = useMemo(() => new Set(docReqs.map((r) => r.id)), [docReqs]);
   const docCases = useMemo(
@@ -180,8 +217,14 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   async function runAnalysis() {
     setBusy(true); setError(""); setWarnings([]);
     try {
-      const targets = docReqs.length ? docReqs.filter((r) => r.status !== "Abgelehnt") : await extractAll();
+      const fresh = docReqs.length === 0;
+      const targets = fresh ? await extractAll() : docReqs.filter((r) => r.status !== "Abgelehnt");
       if (!targets.length) throw new Error("Aus diesem Dokument konnten keine prüfbaren Anforderungen ermittelt werden.");
+      // New rules extracted: compare them with the predecessor version (Änderungsprotokoll).
+      if (fresh) {
+        const run = compareRules(doc, targets);
+        if (run.predecessorName) setWarnings((x) => [...x, `Änderungen gegenüber „${run.predecessorName}“: ${run.counts.geaendert} geändert, ${run.counts.neu} neu, ${run.counts.entfallen} entfallen.`]);
+      }
       for (const [index, req] of targets.entries()) {
         setPhase(`Testfälle erzeugen (${index + 1}/${targets.length}) …`);
         try {
