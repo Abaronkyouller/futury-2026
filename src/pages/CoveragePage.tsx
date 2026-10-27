@@ -1,6 +1,7 @@
-import { Fragment, useState } from "react";
+import { Fragment, useId, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, ChevronRight, Download, FileText, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, FileText, Search, X } from "lucide-react";
 import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
 import { Pager } from "../components/Pager";
@@ -46,6 +47,11 @@ export function CoveragePage() {
   // Presentation view (default): only sections with at least one test case are listed.
   const [showUncovered, setShowUncovered] = useState(false);
   const [query, setQuery] = useState("");
+  // Section picked from the list (exact filter); typing switches back to the free text search.
+  const [sectionKey, setSectionKey] = useState<string | null>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const listId = useId();
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState<string | null>(null);
 
@@ -68,12 +74,31 @@ export function CoveragePage() {
   const statusOptions = COVERAGE_STATUSES.filter((st) => showUncovered || st === "Abgedeckt" || st === "Teilweise abgedeckt");
   const filtered = visibleSections
     .filter((s) => statusFilter === "Alle" || s.status === statusFilter)
-    .filter((s) => !terms.length || terms.every((t) => haystack(s).includes(t)));
+    .filter((s) => (sectionKey ? s.key === sectionKey : !terms.length || terms.every((t) => haystack(s).includes(t))));
+  // Section list of the picker: the sections of the current view, narrowed by what is typed.
+  const labelTerms = sectionKey ? [] : terms;
+  const suggestions = visibleSections
+    .filter((s) => statusFilter === "Alle" || s.status === statusFilter)
+    .filter((s) => labelTerms.every((t) => `${s.label} ${s.documentName} ${s.pages}`.toLocaleLowerCase("de-DE").includes(t)))
+    .slice(0, 50);
+  const pickSection = (s: SectionCoverage) => {
+    setSectionKey(s.key);
+    setQuery(s.label);
+    setListOpen(false);
+    setPage(1);
+    setOpen(s.key); // show its requirements and test cases right away
+  };
+  const onPickerKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); setListOpen(true); setActive((i) => Math.min(i + 1, suggestions.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
+    else if (e.key === "Enter" && listOpen && suggestions[active]) { e.preventDefault(); pickSection(suggestions[active]); }
+    else if (e.key === "Escape") setListOpen(false);
+  };
   const pageCount = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const currentPage = Math.min(page, pageCount);
   const shown = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
-  const filtersActive = query || docFilter !== "Alle" || statusFilter !== "Alle";
-  const reset = () => { setQuery(""); setDocFilter("Alle"); setStatusFilter("Alle"); setPage(1); };
+  const filtersActive = query || sectionKey || docFilter !== "Alle" || statusFilter !== "Alle";
+  const reset = () => { setQuery(""); setSectionKey(null); setDocFilter("Alle"); setStatusFilter("Alle"); setPage(1); };
 
   /** One CSV row per section and test case (sections without cases get one row). */
   const exportCsv = () => download("testabdeckung.csv", "﻿" + toCsv([
@@ -97,7 +122,7 @@ export function CoveragePage() {
     const filters = [
       docFilter !== "Alle" && `Dokument: ${docName ?? docFilter}`,
       statusFilter !== "Alle" && `Status: ${statusFilter}`,
-      query.trim() && `Suche: „${query.trim()}“`,
+      query.trim() && (sectionKey ? `Abschnitt: ${query.trim()}` : `Suche: „${query.trim()}“`),
     ].filter((f): f is string => Boolean(f));
     try {
       printCoverage({ kpis: kpis.map(([label, part, whole, hint]) => ({ label, part, whole, hint })), caseCount: totals.cases, documents: docs, sections: filtered, filters, acceptedOnly, onlyCovered: !showUncovered });
@@ -182,9 +207,47 @@ export function CoveragePage() {
 
           <Panel>
             <h3>Zuordnung Abschnitt → Anforderung → Testfall</h3>
-            <div className="search wide">
-              <Search size={15} />
-              <input placeholder="Abschnitt, Anforderung oder Testfall suchen" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+            <div className="combobox sectionpicker">
+              <div className="search wide">
+                <Search size={15} />
+                <input
+                  role="combobox"
+                  aria-expanded={listOpen}
+                  aria-controls={listId}
+                  aria-autocomplete="list"
+                  placeholder="Abschnitt wählen oder Abschnitt, Anforderung bzw. Testfall suchen"
+                  value={query}
+                  onFocus={() => { setListOpen(true); setActive(0); }}
+                  // Delay so a click on a list entry is handled before the list closes.
+                  onBlur={() => window.setTimeout(() => setListOpen(false), 150)}
+                  onChange={(e) => { setQuery(e.target.value); setSectionKey(null); setListOpen(true); setActive(0); setPage(1); }}
+                  onKeyDown={onPickerKey}
+                />
+                {(query || sectionKey) && (
+                  <button className="cellbtn" aria-label="Auswahl löschen" title="Auswahl löschen" onMouseDown={(e) => { e.preventDefault(); setQuery(""); setSectionKey(null); setPage(1); }}><X size={15} /></button>
+                )}
+              </div>
+              {listOpen && (
+                <ul className="combolist" id={listId} role="listbox">
+                  {suggestions.length === 0 && <li className="comboempty">Kein Abschnitt passt zu „{query}“.</li>}
+                  {suggestions.map((s, i) => (
+                    <li
+                      key={s.key}
+                      role="option"
+                      aria-selected={s.key === sectionKey}
+                      className={(i === active ? "active " : "") + (s.key === sectionKey ? "selected" : "")}
+                      onMouseEnter={() => setActive(i)}
+                      onMouseDown={(e) => { e.preventDefault(); pickSection(s); }}
+                    >
+                      <span className="combomain">
+                        <span className={`status ${STATUS_CLASS[s.status]}`}>{s.status}</span>
+                        {s.label}
+                      </span>
+                      <small className="muted">{s.documentName}{s.pages ? ` · ${s.pages}` : ""} · {s.cases.length} Testfall/Testfälle</small>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="filters">
               <label className="field inline">Status
