@@ -149,7 +149,7 @@ export function Validation() {
         <span>2 Testfall wählen & abgleichen</span>
         <span>3 Entscheidung speichern</span>
         <span>{COMPARE_MODEL.label}: {COMPARE_MODEL.model}</span>
-        <span className="warm">KI und Regelabgleich schlagen vor – keine Regel-Engine angebunden</span>
+        {/* <span className="warm">KI und Regelabgleich schlagen vor – keine Regel-Engine angebunden</span> */}
       </div>
       {storageWarning && <div className="notice">{storageWarning}</div>}
 

@@ -56,7 +56,7 @@ export function Tests() {
   return <>
     <Header
       title="Testfälle"
-      subtitle="Testfälle filtern, aufklappen und prüfen. Maximal zehn Fälle werden je Seite angezeigt. Änderungen je Testfall stehen im Änderungsprotokoll."
+      // subtitle="Testfälle filtern, aufklappen und prüfen. Maximal zehn Fälle werden je Seite angezeigt. Änderungen je Testfall stehen im Änderungsprotokoll."
       action={
         <div className="actions">
           <button className="primary" disabled={requirements.length === 0} onClick={() => setCreating(true)}><Plus size={15} /> Testfall manuell anlegen</button>

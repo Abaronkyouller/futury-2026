@@ -4,8 +4,7 @@ import { deleteResult, loadResults, saveResult } from "../documents/storage";
 import type { PayrollResult } from "../types/validation";
 import { useReviewStore } from "./reviewContext";
 
-const STORAGE_WARNING =
-  "Ergebnisdateien können in diesem Browser nicht dauerhaft gespeichert werden (IndexedDB nicht verfügbar). Sie bleiben nur bis zum Neuladen erhalten.";
+const STORAGE_WARNING = "";
 
 /**
  * Payroll result files imported on "Validierung & Bericht". The files are
