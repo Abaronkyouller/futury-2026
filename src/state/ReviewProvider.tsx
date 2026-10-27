@@ -182,22 +182,6 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const restoreCachedGeneration = useCallback<ReviewStore["restoreCachedGeneration"]>((documentName, cachedAt, requirements, cases) => {
-    setState((s) => ({
-      ...s,
-      requirements: [...s.requirements, ...requirements],
-      cases: [...s.cases, ...cases],
-      changelog: [
-        ...s.changelog,
-        entry({
-          kind: "Generierung",
-          summary: `${cases.length} Testfall/Testfälle für „${documentName}“ aus geprüftem Cache wiederhergestellt`,
-          after: `Cache vom ${cachedAt}\n${cases.map((item) => item.id).join(", ")}`,
-        }),
-      ],
-    }));
-  }, []);
-
   const submitCaseFeedback = useCallback<ReviewStore["submitCaseFeedback"]>((caseId, comment) => {
     setState((s) => {
       const target = s.cases.find((c) => c.id === caseId);
@@ -382,8 +366,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const store = useMemo<ReviewStore>(
-    () => ({ ...state, addRequirements, reviewRequirement, addRun, restoreCachedGeneration, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, recordRuleChanges, updateSettings, resetCases, logEvent }),
-    [state, recordRuleChanges, addRequirements, reviewRequirement, addRun, restoreCachedGeneration, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
+    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, recordRuleChanges, updateSettings, resetCases, logEvent }),
+    [state, recordRuleChanges, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
   );
 
   return <ReviewContext.Provider value={store}>{children}</ReviewContext.Provider>;

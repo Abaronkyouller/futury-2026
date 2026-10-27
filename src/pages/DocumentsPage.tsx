@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { DragEvent } from "react";
 import { FileText, Layers, Search, Sparkles, Trash2, Upload } from "lucide-react";
 import { Header } from "../components/Header";
@@ -10,8 +10,6 @@ import { ACCEPTED_FILE_TYPES, CASES_PER_PAGE } from "../config/documents";
 import { extractRequirements, sectionBatches } from "../ai/extract";
 import { versionLabel } from "../documents/ingest";
 import type { IngestProgress } from "../documents/ingest";
-import { createGenerationCache, generationCacheKey, restoreGenerationCache } from "../documents/generationCache";
-import { loadGenerationCache, saveGenerationCache } from "../documents/storage";
 import { useDocuments } from "../state/documentContext";
 import { useReviewStore } from "../state/reviewContext";
 import { useGeneration } from "../state/useGeneration";
@@ -130,7 +128,7 @@ function DocumentCard({ doc, active, caseCount, onSelect }: { doc: SourceDocumen
         <button title="Regeln mit der Vorgängerversion vergleichen" onClick={() => {
           const run = compare(doc, ownReqs);
           setCompareNote(`${run.counts.geaendert} geändert · ${run.counts.neu} neu · ${run.counts.entfallen} entfallen – siehe Änderungsprotokoll`);
-        }}>Vergleichen</button>
+        }}>Mit Vorgänger vergleichen</button>
       )}
       <div className="actions"><button className={active ? "primary" : ""} onClick={onSelect}>{active ? "Ausgewählt" : "Bearbeiten"}</button><button title="Dokument entfernen" onClick={async () => { if (await confirm({ title: "Dokument entfernen?", message: `„${doc.name}“ wird entfernt. Bereits erzeugte Testfälle bleiben erhalten.`, confirmLabel: "Entfernen" })) removeDocument(doc.id); }}><Trash2 size={15} /></button></div>
     </div>
@@ -178,13 +176,6 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("Alle");
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("Alle");
   const [caseSort, setCaseSort] = useState<CaseSort>("Priorität");
-  // Seed the new cache from older completed analyses, but never cache a partial active run.
-  useEffect(() => {
-    if (busy || docReqs.length === 0 || docCases.length === 0) return;
-    void saveGenerationCache(createGenerationCache(doc, docReqs, docCases)).catch(() => {
-      // The document workflow still works when IndexedDB is blocked.
-    });
-  }, [busy, doc, docReqs, docCases]);
   /** Writable filter; only the first matching source section is visible. */
   const [sectionQuery, setSectionQuery] = useState("");
   const normalizedQuery = sectionQuery.trim().toLocaleLowerCase("de-DE");
@@ -230,24 +221,6 @@ function Workspace({ doc }: { doc: SourceDocument }) {
     setBusy(true); setError(""); setWarnings([]); setThinkingCases([]);
     try {
       const fresh = docReqs.length === 0;
-      if (fresh) {
-        try {
-          const cached = await loadGenerationCache(generationCacheKey(doc));
-          const restored = cached ? restoreGenerationCache(doc, cached) : null;
-          if (restored) {
-            store.restoreCachedGeneration(doc.name, restored.cachedAt, restored.requirements, restored.cases);
-            setThinkingCases(restored.cases);
-            const changeRun = compareRules(doc, restored.requirements);
-            if (changeRun.predecessorName) {
-              setWarnings((x) => [...x, `Änderungen gegenüber „${changeRun.predecessorName}“: ${changeRun.counts.geaendert} geändert, ${changeRun.counts.neu} neu, ${changeRun.counts.entfallen} entfallen.`]);
-            }
-            setPhase("");
-            return;
-          }
-        } catch {
-          // A missing or unavailable cache must never block the normal analysis.
-        }
-      }
       const targets = fresh ? await extractAll() : docReqs.filter((r) => r.status !== "Abgelehnt");
       if (!targets.length) throw new Error("Aus diesem Dokument konnten keine prüfbaren Anforderungen ermittelt werden.");
       // New rules extracted: compare them with the predecessor version (Änderungsprotokoll).
@@ -255,25 +228,17 @@ function Workspace({ doc }: { doc: SourceDocument }) {
         const run = compareRules(doc, targets);
         if (run.predecessorName) setWarnings((x) => [...x, `Änderungen gegenüber „${run.predecessorName}“: ${run.counts.geaendert} geändert, ${run.counts.neu} neu, ${run.counts.entfallen} entfallen.`]);
       }
-      const generated: GeneratedTestCase[] = [];
       for (const [index, req] of targets.entries()) {
         setPhase(`Testfälle erzeugen (${index + 1}/${targets.length}) …`);
         try {
           const run = await runGeneration(req, { ...store.settings, model: AI_MODEL, reasoningDetail: "ausführlich" }, "model");
-          generated.push(...run.cases);
           setThinkingCases((previous) => [...previous, ...run.cases]);
         } catch (modelError) {
           setWarnings((x) => [...x, `KI-Generierung für ${req.id} fehlgeschlagen: ${(modelError as Error).message}`]);
-          const run = await runGeneration(req, { ...store.settings, model: AI_MODEL, reasoningDetail: "ausführlich" }, "regelbasiert");
-          generated.push(...run.cases);
+          await runGeneration(req, { ...store.settings, model: AI_MODEL, reasoningDetail: "ausführlich" }, "regelbasiert");
         }
       }
-      try {
-        await saveGenerationCache(createGenerationCache(doc, targets, [...docCases, ...generated]));
-        setPhase("Fertig.");
-      } catch {
-        setPhase("Fertig.");
-      }
+      setPhase("Fertig.");
     } catch (e) { setError((e as Error).message); setPhase(""); } finally { setBusy(false); }
   }
 
@@ -309,7 +274,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
     </Panel>
     <Panel>
       <div className="paneltop"><h3>Generierte Testfälle · {docCases.length}</h3><label className="checkrow"><input type="checkbox" checked={showReasoning} onChange={(e) => setShowReasoning(e.target.checked)} /> Begründung anzeigen</label></div>
-      {/* <p className="muted small">Es wird jeweils ein Abschnitt der Quelle angezeigt. Ein Klick auf den Kopf klappt einen Testfall auf. Pro Seite erscheinen maximal {CASES_PER_PAGE} Testfälle. Jeder Fall enthält Modellbegründung sowie Quellenzitat, Ontologie, Wissensgraph und Regelmodell.</p> */}
+      <p className="muted small">Es wird jeweils ein Abschnitt der Quelle angezeigt. Ein Klick auf den Kopf klappt einen Testfall auf. Pro Seite erscheinen maximal {CASES_PER_PAGE} Testfälle. Jeder Fall enthält Modellbegründung sowie Quellenzitat, Ontologie, Wissensgraph und Regelmodell.</p>
       {!docCases.length ? <p className="muted">Noch keine Testfälle. Starten Sie oben die Analyse.</p> : <>
         <div className="search wide">
           <Search size={15} />

@@ -58,8 +58,6 @@ export type SourceDocument = {
   name: string;
   format: DocFormat;
   sizeBytes: number;
-  /** Browser file timestamp, used only to identify an exact repeat upload before parsing. */
-  fileLastModified?: number;
   uploadedAt: string; // ISO timestamp
   pageCount?: number;
   /** Version as printed in the document (e.g. "Version 13.4"); undefined if not found. */
