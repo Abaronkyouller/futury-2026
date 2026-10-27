@@ -173,6 +173,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   const [phase, setPhase] = useState("");
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [thinkingCases, setThinkingCases] = useState<GeneratedTestCase[]>([]);
   const [showReasoning, setShowReasoning] = useState(true);
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("Alle");
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("Alle");
@@ -226,9 +227,8 @@ function Workspace({ doc }: { doc: SourceDocument }) {
   }
 
   async function runAnalysis() {
-    setBusy(true); setError(""); setWarnings([]);
+    setBusy(true); setError(""); setWarnings([]); setThinkingCases([]);
     try {
-      if (docCases.length > 0) return;
       const fresh = docReqs.length === 0;
       if (fresh) {
         try {
@@ -236,6 +236,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
           const restored = cached ? restoreGenerationCache(doc, cached) : null;
           if (restored) {
             store.restoreCachedGeneration(doc.name, restored.cachedAt, restored.requirements, restored.cases);
+            setThinkingCases(restored.cases);
             const changeRun = compareRules(doc, restored.requirements);
             if (changeRun.predecessorName) {
               setWarnings((x) => [...x, `Änderungen gegenüber „${changeRun.predecessorName}“: ${changeRun.counts.geaendert} geändert, ${changeRun.counts.neu} neu, ${changeRun.counts.entfallen} entfallen.`]);
@@ -260,6 +261,7 @@ function Workspace({ doc }: { doc: SourceDocument }) {
         try {
           const run = await runGeneration(req, { ...store.settings, model: AI_MODEL, reasoningDetail: "ausführlich" }, "model");
           generated.push(...run.cases);
+          setThinkingCases((previous) => [...previous, ...run.cases]);
         } catch (modelError) {
           setWarnings((x) => [...x, `KI-Generierung für ${req.id} fehlgeschlagen: ${(modelError as Error).message}`]);
           const run = await runGeneration(req, { ...store.settings, model: AI_MODEL, reasoningDetail: "ausführlich" }, "regelbasiert");
@@ -280,8 +282,28 @@ function Workspace({ doc }: { doc: SourceDocument }) {
       <div className="paneltop"><h3><span className="stepno">2</span> Testfälle aus der Spezifikation erzeugen</h3><small>Alle {doc.sections.length} Abschnitte</small></div>
       <p className="muted">Die App analysiert automatisch das gesamte Dokument. Anforderungen bleiben ein interner Verarbeitungsschritt; angezeigt werden die daraus erzeugten Testfälle.</p>
       <div className="chips"><span>Quelle: {doc.name}</span>{doc.version && <span>{doc.version}</span>}{doc.stand && <span>Stand {doc.stand}</span>}</div>
-      <div className="actions"><button className="primary" disabled={busy || !doc.sections.length} onClick={() => void runAnalysis()}><Sparkles size={15} /> {busy ? "Analyse läuft …" : docCases.length ? "Testfälle erzeugen" : "Testfälle erzeugen"}</button></div>
-      {phase && <p className="muted small">{phase}</p>}
+      <div className="actions"><button className="primary" disabled={busy || !doc.sections.length} onClick={() => void runAnalysis()}><Sparkles size={15} /> {busy ? "Analyse läuft …" : docCases.length ? "Testfälle neu erzeugen" : "Testfälle erzeugen"}</button></div>
+      {phase && <p className="muted small" aria-live="polite">{phase}</p>}
+      {thinkingCases.some((item) => item.origin.kind === "model" && item.reasoning.length > 0) && (
+        <details className="checks" open>
+          <summary>Modellbegründung der Testfälle</summary>
+          {thinkingCases
+            .filter((item) => item.origin.kind === "model" && item.reasoning.length > 0)
+            .map((item) => (
+              <div key={item.id}>
+                <b>{item.title}</b>
+                <ol className="reasoning">
+                  {item.reasoning.map((step, index) => (
+                    <li key={`${item.id}-${index}`}>
+                      <span>{step.text}</span>
+                      <small>{step.basis}{step.sourceRef ? ` · ${step.sourceRef}` : ""}</small>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+        </details>
+      )}
       {error && <div className="notice errorbox"><b>Analyse fehlgeschlagen</b><p>{error}</p></div>}
       {warnings.length > 0 && <details className="checks"><summary>{warnings.length} Hinweis(e) zur Analyse</summary><ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></details>}
     </Panel>
