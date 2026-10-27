@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
 import { useDocuments } from "../state/documentContext";
 import { useReviewStore } from "../state/reviewContext";
 
-type Step = { name: string; desc: string; status: string; path: string; warn?: boolean };
+type Step = { name: string; status: string; path: string; warn?: boolean };
 type Attention = { title: string; desc: string; action: string; path: string; danger?: boolean };
 
 /**
@@ -23,31 +24,26 @@ export function Overview() {
   const openCases = cases.filter((c) => c.review.decision === "Offen");
   const failedChecks = cases.filter((c) => c.review.decision !== "Abgelehnt" && c.checks.some((k) => !k.passed));
   const questions = openCases.filter((c) => c.openQuestions.length > 0);
-  const count = (kind: string) => documents.filter((d) => d.classification.kind === kind).length;
 
   const steps: Step[] = [
     {
       name: "Spezifikationen einlesen",
-      desc: `${documents.length} Dokument(e): ${count("Fachlich")} fachlich, ${count("Technisch")} technisch, ${count("Testkonstellation")} Testkonstellation`,
       status: documents.length ? "Erledigt" : "Offen",
       path: "/documents",
     },
     {
       name: "Testfälle erzeugen",
-      desc: `${cases.length} erzeugt, ${accepted.length} akzeptiert, ${openCases.length} offen`,
       status: openCases.length ? "Prüfung nötig" : cases.length ? "Erledigt" : "Offen",
       path: "/documents",
       warn: openCases.length > 0,
     },
     {
       name: "In der Entgeltabrechnung ausführen",
-      desc: "Beim Hersteller, manuell – nicht angebunden",
       status: "Offen",
       path: "/tests",
     },
     {
       name: "Validieren & berichten",
-      desc: "Datenformat und Vergleichsregeln noch offen; Seite zeigt Beispieldaten",
       status: "Beispieldaten",
       path: "/validation",
     },
@@ -87,33 +83,33 @@ export function Overview() {
           </div>
         }
       />
-      <div className="chips">
+      {/* <div className="chips">
         <span>Gespeichert nur in diesem Browser</span>
         <span>Modell über hessian.ai-Gateway</span>
         <span className="warm">Prototyp – keine Ausführung in echter Entgeltabrechnung</span>
-      </div>
+      </div> */}
       <Panel>
         <div className="paneltop">
           <h3>Prüfablauf</h3>
-          <small>Schritte anklicken, um fortzufahren</small>
+          {/* <small>Schritte anklicken, um fortzufahren</small> */}
         </div>
         <div className="pipeline">
           {steps.map((s, i) => (
-            <div className={"step " + (s.warn ? "stepwarn" : "")} key={s.name} onClick={() => nav(s.path)}>
+            <button className={"step " + (s.warn ? "stepwarn" : "")} key={s.name} onClick={() => nav(s.path)}>
               <small>
                 {i + 1} · {s.status}
               </small>
               <b>{s.name}</b>
-              <p>{s.desc}</p>
-            </div>
+              <ChevronRight size={18} className="steparrow" />
+            </button>
           ))}
         </div>
       </Panel>
       <div className="metrics">
         {[
-          ["Dokumente", documents.length, `${documents.filter((d) => d.role === "Technische Informationen").length} mit technischen Informationen`],
-          ["Quellenzitate", docReqs.length, `${unverified.length} nicht wörtlich geprüft`],
-          ["Testfälle erzeugt", cases.length, `${cases.filter((c) => c.origin.kind === "model").length} KI · ${cases.filter((c) => c.origin.kind === "regelbasiert").length} regelbasiert`],
+          ["Dokumente", documents.length],
+          ["Quellenzitate", docReqs.length],
+          ["Testfälle erzeugt", cases.length],
           ["Prüfung offen", openCases.length, `${accepted.length} akzeptiert`],
         ].map(([label, n, desc]) => (
           <Panel key={label as string}>

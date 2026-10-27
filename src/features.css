@@ -300,6 +300,11 @@ table.cmp tbody tr.disagree td, table.cmp tbody tr.disagree th { background: var
 .combomain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
 .combotag { font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 7px; background: var(--source-bg); color: var(--source); }
 .comboempty { color: var(--muted); cursor: default; }
+.combotag-case { background: var(--generated-bg); color: var(--generated); }
+.tracesearch { margin-bottom: 10px; }
+.tracesearch .search.wide { margin: 0; }
+.tracesearch .combolist li { font-size: 14px; }
+.tracesearch .combomain { font-size: 14px; }
 .reasons li { margin-bottom: 6px; line-height: 1.6; }
 
 /* ---------- Feedback-Datenbank ---------- */
@@ -331,3 +336,98 @@ table.cmp tbody tr.disagree td, table.cmp tbody tr.disagree th { background: var
 .quotediff.allnew { border-left: 4px solid var(--good); }
 .quotediff.allgone { border-left: 4px solid var(--bad); text-decoration: line-through; color: var(--muted); }
 @media (max-width: 900px) { .viewswitch { grid-template-columns: 1fr; } }
+
+/* ---------- ITSG button style (owner decision 2026-10-27) ----------
+ * Same as on itsg.de: red #D50032, padding 8px 15px, Fira Sans Condensed.
+ * Main actions are filled red; other buttons are red outlines; the selected
+ * option of a filter, tab or pager is filled red. Buttons that act as cards
+ * (document names, requirement cards, view switch, links) keep their own look.
+ * The font is bundled locally (SIL Open Font License, src/assets/fonts/) so no
+ * request goes to an external font service.
+ */
+@font-face { font-family: "Fira Sans Condensed"; font-style: normal; font-weight: 400; font-display: swap; src: url("./assets/fonts/fira-sans-condensed-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Fira Sans Condensed"; font-style: normal; font-weight: 500; font-display: swap; src: url("./assets/fonts/fira-sans-condensed-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Fira Sans Condensed"; font-style: normal; font-weight: 600; font-display: swap; src: url("./assets/fonts/fira-sans-condensed-latin-600-normal.woff2") format("woff2"); }
+
+button, .buttonlink {
+  font-family: "Fira Sans Condensed", "Arial Narrow", Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  padding: 8px 15px;
+  border: 1px solid var(--button);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--button);
+}
+button:hover:not(:disabled), .buttonlink:hover { background: var(--button-tint); filter: none; }
+button.primary, .buttonlink.primary,
+.filters button.selected, .tabs button.selected, .pager button.active {
+  background: var(--button);
+  border-color: var(--button);
+  color: var(--on-button);
+}
+button.primary:hover:not(:disabled), .buttonlink.primary:hover,
+.filters button.selected:hover:not(:disabled), .tabs button.selected:hover:not(:disabled), .pager button.active:hover:not(:disabled) {
+  background: var(--button-hover);
+  border-color: var(--button-hover);
+}
+.filters button, .tabs button { padding: 8px 15px; font-size: 14px; }
+.pager button { padding: 8px 12px; }
+.pager button.active { font-weight: 600; }
+
+/* Buttons that are cards or text links keep the app font and neutral colours. */
+button.docname, button.reqpickitem, .viewswitch button, button.link {
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: normal;
+  color: var(--text);
+}
+button.docname:hover:not(:disabled), button.link:hover:not(:disabled) { background: none; }
+button.reqpickitem, .viewswitch button { border-color: var(--border); padding: 10px 12px; }
+button.reqpickitem:hover:not(:disabled), .viewswitch button:hover:not(:disabled) { background: var(--primary-tint); border-color: var(--primary-line); }
+button.reqpickitem.selected, .viewswitch button.selected { border-color: var(--primary-ink); }
+.viewswitch button { padding: 14px 16px; }
+button.link { color: var(--primary-ink); padding: 5px; }
+button.docname { padding: 0; }
+
+/* ---------- Confirmation dialog (replaces the browser's confirm pop-up) ---------- */
+.confirmdialog { border: 0; padding: 0; border-radius: 10px; background: transparent; max-width: min(460px, calc(100vw - 32px)); width: 100%; }
+.confirmdialog::backdrop { background: var(--overlay); }
+.confirmbox { display: grid; grid-template-columns: auto 1fr; gap: 14px 16px; padding: 24px; background: var(--surface); border-radius: 10px; border-top: 4px solid var(--button); box-shadow: 0 18px 48px var(--shadow); color: var(--text); }
+.confirmicon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--button-tint); color: var(--button); }
+.confirmbox h3 { margin: 2px 0 6px; font-size: 18px; }
+.confirmbox p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+.confirmactions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+
+/* Long words (file names, UUIDs, table rows from PDFs) wrap instead of running out of their box. */
+.reqpickitem, .reqpickitem > *, .tracecase, .tracecase > summary > *, .tracebody, .tracelead, .stepbody,
+.steptitle, .tracelist, .tracelist li, .tracewarn, .traceinfo, .tracechecks li > span, .quote, .combolist li,
+.paneltop h3, .paneltop > div { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.tracebody, .stepbody { overflow: hidden; }
+
+/* ---------- Overview: Prüfablauf steps as buttons ----------
+ * The four steps fill the row evenly (2 × 2 below 1100 px, 1 per row on phones). They are
+ * real buttons (keyboard accessible) but keep the tile look; the hover uses the
+ * ITSG red as accent.
+ */
+.pipeline { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+button.step {
+  position: relative;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  width: 100%; min-height: 96px; margin: 0;
+  padding: 16px 44px 16px 16px;
+  text-align: left;
+  font-family: inherit; font-size: inherit; letter-spacing: normal; font-weight: 400;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+button.step small { margin: 0; font-size: 12px; }
+button.step b { font-size: 15px; line-height: 1.35; }
+button.step.stepwarn { background: var(--warn-bg); border-color: var(--warn-line); }
+button.step:hover:not(:disabled) { background: var(--button-tint); border-color: var(--button); }
+button.step:hover .steparrow { color: var(--button); transform: translateX(2px); }
+.steparrow { position: absolute; right: 14px; top: 50%; margin-top: -9px; color: var(--muted); transition: transform 0.15s, color 0.15s; }
+@media (max-width: 1100px) { .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .pipeline { grid-template-columns: 1fr; } }

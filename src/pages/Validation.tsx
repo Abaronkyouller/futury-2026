@@ -16,6 +16,7 @@ import { activeNotes, isActive } from "../feedback/collect";
 import type { OverallVerdict, ResultComparison } from "../types/validation";
 import { download } from "../utils/download";
 import { formatDateTime, toCsv } from "../utils/format";
+import { useConfirm } from "../state/confirmContext";
 
 /** Suggested test cases shown above the full list in the case picker. */
 const SUGGESTIONS_SHOWN = 5;
@@ -66,6 +67,7 @@ export function Validation() {
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [hover, setHover] = useState(false);
+  const confirm = useConfirm();
   const [preview, setPreview] = useState<string | null>(null);
 
   const result = results.find((r) => r.id === resultId) ?? results[results.length - 1];
@@ -134,7 +136,7 @@ export function Validation() {
     <>
       <Header
         title="Validierung & Prüfbericht"
-        subtitle="Ergebnisse aus der Entgeltabrechnungssoftware hochladen und mit den erwarteten Werten eines Testfalls abgleichen. Die KI und ein regelbasierter Zeilenabgleich bewerten unabhängig voneinander und werden gegenübergestellt; die Entscheidung trifft der Prüfer."
+        // subtitle="Ergebnisse aus der Entgeltabrechnungssoftware hochladen und mit den erwarteten Werten eines Testfalls abgleichen. Die KI und ein regelbasierter Zeilenabgleich bewerten unabhängig voneinander und werden gegenübergestellt; die Entscheidung trifft der Prüfer."
         action={
           <div className="actions">
             <button onClick={() => window.print()} disabled={!comparisons.length}><Printer size={15} /> Drucken / PDF</button>
@@ -179,7 +181,7 @@ export function Validation() {
               </button>
               <div className="actions">
                 <button className="link" onClick={() => setPreview(preview === r.id ? null : r.id)}>{preview === r.id ? "Text ausblenden" : "Text"}</button>
-                <button title="Ergebnis entfernen" onClick={() => { if (window.confirm(`„${r.name}“ entfernen? Gespeicherte Abgleiche bleiben erhalten.`)) remove(r.id); }}><Trash2 size={15} /></button>
+                <button title="Ergebnis entfernen" onClick={async () => { if (await confirm({ title: "Ergebnis entfernen?", message: `„${r.name}“ wird entfernt. Gespeicherte Abgleiche bleiben erhalten.`, confirmLabel: "Entfernen" })) remove(r.id); }}><Trash2 size={15} /></button>
               </div>
               {r.warnings.length > 0 && <ul className="warnings">{r.warnings.map((w) => <li key={w}>⚠ {w}</li>)}</ul>}
               {preview === r.id && <div className="sourcetext">{r.text}</div>}

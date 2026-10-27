@@ -13,7 +13,7 @@ export function Header({
   return (
     <div className="heading">
       <div>
-        <div className="breadcrumb">Systemprüfung · Entgeltersatzleistungen (DTA EEL)</div>
+        <div className="breadcrumb">Systemprüfung</div>
         <h1>{title}</h1>
         {subtitle && <p>{subtitle}</p>}
       </div>

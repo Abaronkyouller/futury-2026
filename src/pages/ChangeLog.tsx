@@ -13,6 +13,7 @@ import { SAMPLE_RULE_CHANGES, SAMPLE_RULE_RUNS } from "../data/ruleChanges";
 import type { RuleChange, RuleChangeKind } from "../types/ruleChange";
 import { download } from "../utils/download";
 import { formatDateTime, toCsv } from "../utils/format";
+import { useConfirm } from "../state/confirmContext";
 
 /** Rows per page in both tables. */
 const ROWS_PER_PAGE = 15;
@@ -214,6 +215,7 @@ function RuleView() {
 function CaseView() {
   const { changelog, ruleChanges, cases, resetCases } = useReviewStore();
   const [kind, setKind] = useState<CaseChangeKind | "Alle">("Alle");
+  const confirm = useConfirm();
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const history = useMemo(() => buildCaseHistory(changelog, ruleChanges), [changelog, ruleChanges]);
@@ -241,7 +243,7 @@ function CaseView() {
           <button onClick={exportCsv} disabled={!rows.length}><Download size={15} /> CSV</button>
           <button
             disabled={cases.length === 0}
-            onClick={() => { if (window.confirm(`Alle ${cases.length} erzeugten Testfälle samt Rückmeldungen entfernen? Das Protokoll behält einen Eintrag.`)) resetCases(); }}
+            onClick={async () => { if (await confirm({ title: "Alle Testfälle entfernen?", message: `Alle ${cases.length} erzeugten Testfälle samt Rückmeldungen werden entfernt. Das Protokoll behält einen Eintrag.`, confirmLabel: "Alle entfernen" })) resetCases(); }}
           >
             <Trash2 size={15} /> Testfälle zurücksetzen
           </button>
@@ -312,7 +314,7 @@ export function ChangeLog() {
     <>
       <Header
         title="Änderungsprotokoll"
-        subtitle="Wie sich Regeln und Spezifikationen über die Zeit verändert haben – und wie sich die Testfälle verändert haben. Alle Einträge mit Zeitstempel; nichts wird stillschweigend überschrieben."
+        // subtitle="Wie sich Regeln und Spezifikationen über die Zeit verändert haben – und wie sich die Testfälle verändert haben. Alle Einträge mit Zeitstempel; nichts wird stillschweigend überschrieben."
         action={<button onClick={exportAll} disabled={!changelog.length}><Download size={15} /> Gesamtprotokoll (CSV)</button>}
       />
       <div className="viewswitch" role="tablist">

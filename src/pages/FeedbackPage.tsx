@@ -12,6 +12,7 @@ import { FEEDBACK_AREAS, FEEDBACK_SCOPES, NOTE_SCOPES } from "../types/feedback"
 import type { FeedbackArea, FeedbackEntry, FeedbackScope, NoteScope } from "../types/feedback";
 import { download } from "../utils/download";
 import { formatDateTime, toCsv } from "../utils/format";
+import { useConfirm } from "../state/confirmContext";
 
 /** Rows per page of the feedback table. */
 const ROWS_PER_PAGE = 20;
@@ -103,6 +104,7 @@ export function FeedbackPage() {
   const [scope, setScope] = useState<FeedbackScope | "Alle Bereiche">("Alle Bereiche");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("Alle");
   const [decision, setDecision] = useState("Alle");
+  const confirm = useConfirm();
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
@@ -245,7 +247,7 @@ export function FeedbackPage() {
                       </td>
                       <td>
                         {e.area === "Hinweis" && (
-                          <button title="Hinweis löschen" onClick={() => { if (window.confirm("Hinweis löschen? Der Eintrag im Änderungsprotokoll bleibt.")) removeFeedbackNote(e.id); }}>
+                          <button title="Hinweis löschen" onClick={async () => { if (await confirm({ title: "Hinweis löschen?", message: "Der Hinweis wird den Modellen nicht mehr mitgegeben. Der Eintrag im Änderungsprotokoll bleibt.", confirmLabel: "Löschen" })) removeFeedbackNote(e.id); }}>
                             <Trash2 size={14} />
                           </button>
                         )}
