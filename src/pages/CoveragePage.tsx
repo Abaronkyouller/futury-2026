@@ -169,7 +169,7 @@ export function CoveragePage() {
                 {docs.map((d) => (
                   <button key={d.source.id} className="covdoc" onClick={() => { setDocFilter(d.source.id); setPage(1); }} title="Nur dieses Dokument anzeigen">
                     <span className="covdocname">{d.source.name}</span>
-                    {!d.source.loaded && <span className="muted small">{d.source.sample ? "ohne Quelldokument" : "Originaldokument nicht geladen – nur Abschnitte mit Anforderungen"}</span>}
+                    {/* {!d.source.loaded && <span className="muted small">{d.source.sample ? "ohne Quelldokument" : "Originaldokument nicht geladen – nur Abschnitte mit Anforderungen"}</span>} */}
                     <span className="muted small">Abschnitte {d.sectionsWithCases}/{d.sections.length}</span>
                     <Bar value={percent(d.sectionsWithCases, d.sections.length)} />
                     <b>{percent(d.sectionsWithCases, d.sections.length)} %</b>

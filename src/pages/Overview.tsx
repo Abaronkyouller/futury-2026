@@ -1,9 +1,25 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { Header } from "../components/Header";
 import { Panel } from "../components/Panel";
+import { Pager } from "../components/Pager";
 import { useDocuments } from "../state/documentContext";
 import { useReviewStore } from "../state/reviewContext";
+
+/** Entries per page in "Abdeckung nach Leistung". */
+const COVERAGE_PER_PAGE = 5;
+/**
+ * Metrics for "Abdeckung nach Leistung" (share of requirements per benefit):
+ * - "Testfall vorhanden": at least one test case that was not rejected
+ * - "Testfall akzeptiert": at least one test case accepted by the examiner
+ */
+const COVERAGE_METRICS = ["Testfall vorhanden", "Testfall akzeptiert"] as const;
+type CoverageMetric = (typeof COVERAGE_METRICS)[number];
+const METRIC_HINT: Record<CoverageMetric, string> = {
+  "Testfall vorhanden": "Anteil der Anforderungen mit mindestens einem Testfall (ohne abgelehnte)",
+  "Testfall akzeptiert": "Anteil der Anforderungen mit mindestens einem vom Prüfer akzeptierten Testfall",
+};
 
 type Step = { name: string; status: string; path: string; warn?: boolean };
 type Attention = { title: string; desc: string; action: string; path: string; danger?: boolean };
@@ -14,6 +30,9 @@ type Attention = { title: string; desc: string; action: string; path: string; da
  * validation are not connected yet and say so.
  */
 export function Overview() {
+  const [coveragePage, setCoveragePage] = useState(1);
+  const [metric, setMetric] = useState<CoverageMetric>("Testfall vorhanden");
+  const [onlyDocs, setOnlyDocs] = useState(true);
   const nav = useNavigate();
   const { documents } = useDocuments();
   const { requirements, cases } = useReviewStore();
@@ -64,12 +83,19 @@ export function Overview() {
       : []),
   ];
 
-  const benefits = [...new Set(requirements.map((r) => r.benefit))];
+  // Sample requirements (no uploaded source) are left out when documents exist and the switch is on.
+  const scoped = onlyDocs && docReqs.length > 0 ? docReqs : requirements;
+  const counting = metric === "Testfall akzeptiert" ? accepted : cases.filter((c) => c.review.decision !== "Abgelehnt");
+  const benefits = [...new Set(scoped.map((r) => r.benefit))];
   const coverage = benefits.map((b) => {
-    const reqs = requirements.filter((r) => r.benefit === b);
-    const covered = reqs.filter((r) => accepted.some((c) => c.requirementId === r.id)).length;
+    const reqs = scoped.filter((r) => r.benefit === b);
+    const covered = reqs.filter((r) => counting.some((c) => c.requirementId === r.id)).length;
     return { benefit: b, covered, total: reqs.length, pct: Math.round((covered / reqs.length) * 100) };
   });
+
+  // "Abdeckung nach Leistung" is paginated: at most COVERAGE_PER_PAGE entries per page.
+  const coveragePages = Math.max(1, Math.ceil(coverage.length / COVERAGE_PER_PAGE));
+  const coveragePageNow = Math.min(coveragePage, coveragePages);
 
   return (
     <>
@@ -136,8 +162,19 @@ export function Overview() {
         </Panel>
         <Panel>
           <h3>Abdeckung nach Leistung</h3>
-          <p className="muted">Anteil der Anforderungen mit mindestens einem akzeptierten Testfall</p>
-          {coverage.map((c) => (
+          <div className="filters metricswitch">
+            {COVERAGE_METRICS.map((m) => (
+              <button key={m} className={metric === m ? "selected" : ""} onClick={() => { setMetric(m); setCoveragePage(1); }}>{m}</button>
+            ))}
+            {docReqs.length > 0 && (
+              <label className="checkrow">
+                <input type="checkbox" checked={onlyDocs} onChange={(e) => { setOnlyDocs(e.target.checked); setCoveragePage(1); }} />
+                Nur hochgeladene Dokumente
+              </label>
+            )}
+          </div>
+          <p className="muted">{METRIC_HINT[metric]}{onlyDocs && docReqs.length > 0 ? " · ohne Beispieldaten" : ""}</p>
+          {coverage.slice((coveragePageNow - 1) * COVERAGE_PER_PAGE, coveragePageNow * COVERAGE_PER_PAGE).map((c) => (
             <div className="coverage" key={c.benefit}>
               <span>{c.benefit}</span>
               <div className="track">
@@ -146,7 +183,8 @@ export function Overview() {
               <b title={`${c.covered} von ${c.total}`}>{c.pct}%</b>
             </div>
           ))}
-          <p className="muted foot">Akzeptiert heißt vom Prüfer bestätigt, nicht ausgeführt. Nicht abgedeckte Anforderungen bleiben offene Punkte im Prüfbericht.</p>
+          {coveragePages > 1 && <Pager page={coveragePageNow} pageCount={coveragePages} total={coverage.length} unit="Leistung(en)" onPage={setCoveragePage} />}
+          <p className="muted foot">„Testfall vorhanden“ heißt erzeugt und nicht abgelehnt, „Testfall akzeptiert“ heißt vom Prüfer bestätigt – beides heißt nicht ausgeführt. Nicht abgedeckte Anforderungen bleiben offene Punkte im Prüfbericht.</p>
         </Panel>
       </div>
     </>

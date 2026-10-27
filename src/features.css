@@ -513,3 +513,6 @@ button.covdoc:hover:not(:disabled) { background: var(--primary-tint); border-col
 .covreqs ul { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .covreqs li li { display: list-item; }
 @media (max-width: 1000px) { .covkpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Metric switch in "Abdeckung nach Leistung" (Übersicht) */
+.metricswitch { margin: 6px 0 4px; }
