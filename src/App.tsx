@@ -10,6 +10,7 @@ import { ChangeLog } from "./pages/ChangeLog";
 import { FeedbackPage } from "./pages/FeedbackPage";
 import { TestReportPage } from "./pages/TestReportPage";
 import { SoftwarePage } from "./pages/SoftwarePage";
+import { CoveragePage } from "./pages/CoveragePage";
 import { ReviewProvider } from "./state/ReviewProvider";
 import { DocumentProvider } from "./state/DocumentProvider";
 import { ConfirmProvider } from "./components/ConfirmDialog";
@@ -36,6 +37,7 @@ export function App() {
                 <Route path="/testbericht" element={<TestReportPage />} />
                 <Route path="/software" element={<SoftwarePage />} />
                 <Route path="/graph" element={<GraphPage />} />
+                <Route path="/abdeckung" element={<CoveragePage />} />
                 <Route path="/feedback" element={<FeedbackPage />} />
                 <Route path="/changelog" element={<ChangeLog />} />
                 <Route path="*" element={<Overview />} />

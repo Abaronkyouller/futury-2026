@@ -489,3 +489,27 @@ select.miniselect.st-good { background: var(--good-bg); color: var(--good); }
 select.miniselect.st-bad { background: var(--bad-bg); color: var(--bad); }
 select.miniselect.st-neutral { background: var(--neutral-bg); color: var(--neutral); }
 .defaulthint { display: block; margin-top: 3px; font-size: 11px; }
+
+/* ---------- Testabdeckung ---------- */
+.covtop { margin-top: 0; }
+.covkpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 6px 0 12px; }
+.covkpi { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.covkpi small { color: var(--muted); font-weight: 600; }
+.covkpi b { font-size: 28px; line-height: 1.1; }
+.covbar { height: 8px; border-radius: 6px; background: var(--border-soft); overflow: hidden; }
+.covfill { height: 100%; border-radius: 6px; }
+.cov-good { background: var(--good); }
+.cov-warn { background: var(--warn); }
+.cov-bad { background: var(--bad); }
+.covdocs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 10px; }
+button.covdoc { display: flex; flex-direction: column; align-items: stretch; gap: 5px; text-align: left; padding: 12px 14px; font-family: inherit; font-size: 13px; font-weight: 400; color: var(--text); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); letter-spacing: normal; }
+button.covdoc:hover:not(:disabled) { background: var(--primary-tint); border-color: var(--primary-line); }
+.covdocname { font-weight: 600; overflow-wrap: anywhere; }
+.covtable td, .covtable th { vertical-align: middle; }
+.covtable tr.subrow td { background: var(--surface-2); }
+.covcases { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.covcases code { font-size: 11px; }
+.covreqs { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.covreqs ul { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.covreqs li li { display: list-item; }
+@media (max-width: 1000px) { .covkpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

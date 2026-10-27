@@ -6,8 +6,8 @@ import { caseHtml, escapeHtml } from "./testCasePdf";
 import { caseOutcome, countOutcomes, latestComparisons } from "./testOutcome";
 
 /** Theme tokens copied into the print window, so the report uses the colours of theme.css (no literals here). */
-const PRINT_TOKENS = ["--accent", "--text", "--missing", "--surface-2", "--good", "--bad", "--muted"];
-function themeVars(): string {
+const PRINT_TOKENS = ["--accent", "--text", "--missing", "--surface-2", "--good", "--bad", "--muted", "--warn"];
+export function themeVars(): string {
   const css = getComputedStyle(document.documentElement);
   return `:root { ${PRINT_TOKENS.map((t) => `${t}: ${css.getPropertyValue(t).trim()};`).join(" ")} }`;
 }

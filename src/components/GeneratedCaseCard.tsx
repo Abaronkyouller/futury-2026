@@ -9,7 +9,6 @@ import { buildCaseTrace } from "../reasoning/trace";
 import { expectedStatus } from "../reasoning/expectedStatus";
 import { CaseBackendDetails } from "./CaseBackendDetails";
 import { TestDataEditor } from "./TestDataEditor";
-import { comparisonOutcome, latestComparisons, OUTCOME_CLASS } from "../utils/testOutcome";
 import { Status } from "./Status";
 import { formatDateTime } from "../utils/format";
 import { sanitizeCaseTitle, testDataAvailability, visibleFields } from "../utils/caseText";
@@ -81,9 +80,7 @@ export function GeneratedCaseCard({
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
 }) {
-  const { reviewCase, submitCaseFeedback, requirements, settings, comparisons } = useReviewStore();
-  // Result from the comparison (examiner verdict); per-software results live on the Testbericht page.
-  const outcome = comparisonOutcome(latestComparisons(comparisons).get(item.id));
+  const { reviewCase, submitCaseFeedback, requirements, settings } = useReviewStore();
   const runGeneration = useGeneration();
   const [comment, setComment] = useState(item.review.comment);
   const [regenerating, setRegenerating] = useState(false);
@@ -156,7 +153,6 @@ export function GeneratedCaseCard({
           {collapsible && <span className="casemark">{open ? "▲" : "▼"}</span>}
           <PriorityBadge value={item.priority} />
           <Status value={item.review.decision} />
-          {showStatuses && <span className={`status ${OUTCOME_CLASS[outcome]}`} title="Ergebnis aus dem Abgleich (Prüferentscheidung)">{outcome}</span>}
         </div>
       </div>
       {open && <>
