@@ -8,6 +8,8 @@ import { Validation } from "./pages/Validation";
 import { GraphPage } from "./pages/GraphPage";
 import { ChangeLog } from "./pages/ChangeLog";
 import { FeedbackPage } from "./pages/FeedbackPage";
+import { TestReportPage } from "./pages/TestReportPage";
+import { SoftwarePage } from "./pages/SoftwarePage";
 import { ReviewProvider } from "./state/ReviewProvider";
 import { DocumentProvider } from "./state/DocumentProvider";
 import { ConfirmProvider } from "./components/ConfirmDialog";
@@ -31,6 +33,8 @@ export function App() {
                 <Route path="/generate" element={<Generator />} />
                 <Route path="/tests" element={<Tests />} />
                 <Route path="/validation" element={<Validation />} />
+                <Route path="/testbericht" element={<TestReportPage />} />
+                <Route path="/software" element={<SoftwarePage />} />
                 <Route path="/graph" element={<GraphPage />} />
                 <Route path="/feedback" element={<FeedbackPage />} />
                 <Route path="/changelog" element={<ChangeLog />} />

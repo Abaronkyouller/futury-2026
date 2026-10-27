@@ -9,6 +9,8 @@ import {
   Network,
   History,
   MessageSquare,
+  FileText,
+  Package,
 } from "lucide-react";
 
 /** Navigation entries; `section` starts a labelled group. Keep in sync with routes in App.tsx. */
@@ -18,6 +20,8 @@ const LINKS = [
   // { path: "/generate", label: "Einstellung", Icon: Sparkles },
   { path: "/tests", label: "Testfälle", Icon: FlaskConical },
   { path: "/validation", label: "Validierung & Bericht", Icon: CheckCircle2 },
+  { path: "/testbericht", label: "Testbericht", Icon: FileText },
+  { path: "/software", label: "Software", Icon: Package },
   { path: "/graph", label: "Nachverfolgbarkeit", Icon: Network, section: "NACHWEIS" },
   { path: "/feedback", label: "Feedback", Icon: MessageSquare },
   { path: "/changelog", label: "Änderungsprotokoll", Icon: History },

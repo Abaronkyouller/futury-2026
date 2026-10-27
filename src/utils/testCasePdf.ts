@@ -2,7 +2,7 @@ import type { Req } from "../types/requirement";
 import type { GeneratedTestCase } from "../types/review";
 import { visibleFields } from "./caseText";
 
-const escapeHtml = (value: string) => value
+export const escapeHtml = (value: string) => value
   .replace(/&/g, "&amp;")
   .replace(/</g, "&lt;")
   .replace(/>/g, "&gt;")
@@ -14,7 +14,7 @@ function rows(items: { field: string; value: string }[]): string {
   return `<table><tbody>${items.map((item) => `<tr><th>${escapeHtml(item.field)}</th><td>${escapeHtml(item.value)}</td></tr>`).join("")}</tbody></table>`;
 }
 
-function caseHtml(item: GeneratedTestCase, req: Req | undefined): string {
+export function caseHtml(item: GeneratedTestCase, req: Req | undefined): string {
   const origin = req?.origin;
   const source = origin
     ? `${origin.documentName}${origin.documentVersion ? ` · ${origin.documentVersion}` : ""} · ${origin.sectionLabel}`

@@ -23,6 +23,7 @@ const EMPTY: ReviewState = {
   feedbackExcluded: [],
   ruleChanges: [],
   ruleChangeRuns: [],
+  testReports: [],
   priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
 };
 
@@ -64,6 +65,7 @@ function load(): ReviewState {
       feedbackExcluded: parsed.feedbackExcluded ?? [],
       ruleChanges: parsed.ruleChanges ?? [],
       ruleChangeRuns: parsed.ruleChangeRuns ?? [],
+      testReports: parsed.testReports ?? [],
       priorityAssignmentVersion: PRIORITY_ASSIGNMENT_VERSION,
     };
   } catch {
@@ -221,6 +223,30 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
           ...s.changelog,
           entry({ kind: "Prüfung", requirementId: target.requirementId, testCaseId: caseId, summary: `Testdaten ${caseId}: ${change}`, before: count(target.datasets), after: count(datasets) }),
         ],
+      };
+    });
+  }, []);
+
+  const saveTestReport = useCallback<ReviewStore["saveTestReport"]>((report, change) => {
+    setState((s) => {
+      const exists = s.testReports.some((r) => r.id === report.id);
+      const saved = { ...report, updatedAt: new Date().toISOString() };
+      return {
+        ...s,
+        testReports: exists ? s.testReports.map((r) => (r.id === report.id ? saved : r)) : [...s.testReports, saved],
+        changelog: [...s.changelog, entry({ kind: "Testbericht", summary: `Testbericht „${report.software}“: ${change}`, after: `${report.caseIds.length} Testfall/Testfälle zugeordnet` })],
+      };
+    });
+  }, []);
+
+  const deleteTestReport = useCallback<ReviewStore["deleteTestReport"]>((id) => {
+    setState((s) => {
+      const target = s.testReports.find((r) => r.id === id);
+      if (!target) return s;
+      return {
+        ...s,
+        testReports: s.testReports.filter((r) => r.id !== id),
+        changelog: [...s.changelog, entry({ kind: "Testbericht", summary: `Testbericht „${target.software}“ gelöscht`, before: `${target.caseIds.length} Testfall/Testfälle zugeordnet` })],
       };
     });
   }, []);
@@ -385,8 +411,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const store = useMemo<ReviewStore>(
-    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, recordRuleChanges, updateSettings, resetCases, logEvent }),
-    [state, recordRuleChanges, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
+    () => ({ ...state, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, saveTestReport, deleteTestReport, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, recordRuleChanges, updateSettings, resetCases, logEvent }),
+    [state, recordRuleChanges, addRequirements, reviewRequirement, addRun, reviewCase, submitCaseFeedback, setTestDatasets, saveTestReport, deleteTestReport, addComparison, reviewComparison, addFeedbackNote, removeFeedbackNote, setFeedbackActive, updateSettings, resetCases, logEvent],
   );
 
   return <ReviewContext.Provider value={store}>{children}</ReviewContext.Provider>;

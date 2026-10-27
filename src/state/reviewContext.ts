@@ -10,6 +10,7 @@ import type {
 } from "../types/review";
 import type { ComparisonFeedback, ResultComparison } from "../types/validation";
 import type { MaintainerNote, NoteScope } from "../types/feedback";
+import type { TestReport } from "../types/testReport";
 import type { RuleChange, RuleChangeRun } from "../types/ruleChange";
 
 /** Persisted part of the review state (localStorage, this browser only). */
@@ -29,6 +30,8 @@ export type ReviewState = {
   ruleChanges: RuleChange[];
   /** One entry per comparison of a document with its predecessor. */
   ruleChangeRuns: RuleChangeRun[];
+  /** Test reports per software under test (Testbericht). */
+  testReports: TestReport[];
   /** Version marker for one-time migrations of persisted priority assignments. */
   priorityAssignmentVersion: number;
 };
@@ -52,6 +55,9 @@ export type ReviewStore = ReviewState & {
    * the change is logged; plain cell edits pass no `change` and are saved silently.
    */
   setTestDatasets: (caseId: string, datasets: TestDatasets, change?: string) => void;
+  /** Creates or updates a test report; `change` (e.g. "3 Testfälle zugeordnet") is logged. */
+  saveTestReport: (report: TestReport, change: string) => void;
+  deleteTestReport: (id: string) => void;
   /** Stores one two-model comparison and logs it. */
   addComparison: (comparison: ResultComparison) => void;
   /** Records the examiner's binding verdict on a comparison; the previous value is logged. */
