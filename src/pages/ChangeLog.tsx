@@ -54,10 +54,9 @@ function QuoteDiff({ change }: { change: RuleChange }) {
 /** Option 1: how rules/specifications changed between document versions. */
 function RuleView() {
   const store = useReviewStore();
-  // Illustrative history (fictional demo specs) shown next to real detections; switchable.
-  const [showSamples, setShowSamples] = useState(true);
-  const ruleChanges = showSamples ? [...SAMPLE_RULE_CHANGES, ...store.ruleChanges] : store.ruleChanges;
-  const ruleChangeRuns = (showSamples ? [...SAMPLE_RULE_RUNS, ...store.ruleChangeRuns] : store.ruleChangeRuns)
+  // Sample history and detected changes are always shown together.
+  const ruleChanges = [...SAMPLE_RULE_CHANGES, ...store.ruleChanges];
+  const ruleChangeRuns = [...SAMPLE_RULE_RUNS, ...store.ruleChangeRuns]
     .slice()
     .sort((a, b) => a.detectedAt.localeCompare(b.detectedAt));
   const [kind, setKind] = useState<RuleChangeKind | "Alle">("Alle");
@@ -93,10 +92,6 @@ function RuleView() {
       <Panel>
         <div className="paneltop">
           <h3>Versionsvergleiche</h3>
-          <label className="checkrow" title="Fiktive Demo-Spezifikationen zur Veranschaulichung – keine echten Änderungen der DTA EEL">
-            <input type="checkbox" checked={showSamples} onChange={(e) => { setShowSamples(e.target.checked); setPage(1); }} />
-            Beispieldaten anzeigen ({SAMPLE_RULE_RUNS.length} Vergleiche, {SAMPLE_RULE_CHANGES.length} Änderungen)
-          </label>
         </div>
         <p className="muted small">
           Wird automatisch ausgeführt, wenn ein Dokument mit Vorgängerversion analysiert wird.
