@@ -319,7 +319,7 @@ export function DocumentsPage() {
   const active = documents.find((d) => d.id === activeId) ?? documents[documents.length - 1];
   const caseCount = (doc: SourceDocument) => { const ids = new Set(requirements.filter((r) => r.origin?.documentId === doc.id).map((r) => r.id)); return cases.filter((c) => ids.has(c.requirementId)).length; };
   return <>
-    <Header title="Dokumente & Testfälle" subtitle="Spezifikation hochladen, alle Abschnitte automatisch analysieren und Testfälle mit Modellbegründung und Quellennachweis erhalten." />
+    <Header title="Testfall-Generator" subtitle="Spezifikation hochladen, alle Abschnitte automatisch analysieren und Testfälle mit Modellbegründung und Quellennachweis erhalten." />
     <div className="chips"><span>1 Hochladen</span><span>2 Testfälle erzeugen</span><span>3 Testfälle prüfen</span><span className="warm">Ergebnisse sind Vorschläge – Prüfer/in entscheidet</span></div>
     {storageWarning && <div className="notice">{storageWarning}</div>}
     <Panel><h3><span className="stepno">1</span> Dokumente</h3><UploadArea />

@@ -6,11 +6,10 @@ import { Panel } from "../components/Panel";
 import { GeneratedCaseCard } from "../components/GeneratedCaseCard";
 import { Pager } from "../components/Pager";
 import { useReviewStore } from "../state/reviewContext";
-import { ORIGIN_LABEL, PRIORITIES } from "../types/review";
+import { PRIORITIES } from "../types/review";
 import type { ChangeKind, ChangeLogEntry, GeneratedTestCase, Priority } from "../types/review";
-import { download } from "../utils/download";
-import { formatDateTime, toCsv } from "../utils/format";
-import { sanitizeCaseTitle, visibleFields } from "../utils/caseText";
+import { formatDateTime } from "../utils/format";
+import { printTestCasesAsPdf } from "../utils/testCasePdf";
 
 const REVIEW_FILTERS = ["Alle", "Offen", "Akzeptiert", "Abgelehnt"] as const;
 type ReviewFilter = (typeof REVIEW_FILTERS)[number];
@@ -29,35 +28,6 @@ const KIND_CLASS: Record<ChangeKind, string> = {
   Einstellungen: "kind-settings",
   Zurücksetzen: "kind-reset",
 };
-
-/** One CSV row per case; steps and fields are flattened so the vendor can follow them. */
-function exportPlan(cases: GeneratedTestCase[], sourceOf: (id: string) => string) {
-  const rows = cases.map((c) => [
-    c.id,
-    c.requirementId,
-    sourceOf(c.requirementId),
-    sanitizeCaseTitle(c.title),
-    c.technique,
-    c.priority,
-    ORIGIN_LABEL[c.origin.kind],
-    c.review.decision,
-    c.given,
-    c.when,
-    c.then,
-    visibleFields(c.testData).map((f) => `${f.field}: ${f.value}`).join(" | "),
-    c.steps.map((s, i) => `${i + 1}. ${s.actor}: ${s.action}${s.abgabegrund ? ` (Abgabegrund ${s.abgabegrund})` : ""}`).join(" | "),
-    c.expectedFields.map((f) => `${f.field}: ${f.value}`).join(" | "),
-    c.criteriaIds.join(" | "),
-    c.execution,
-  ]);
-  download(
-    "testplan.csv",
-    toCsv([
-      ["ID", "Anforderung", "Quelle", "Titel", "Technik", "Priorität", "Herkunft", "Prüfung", "Gegeben", "Wenn", "Dann", "Testdaten", "Ablauf", "Erwartet", "Kriterien", "Ausführung"],
-      ...rows,
-    ]),
-  );
-}
 
 /** Timeline entries directly related to one generated test case. */
 function CaseHistory({ entries }: { entries: ChangeLogEntry[] }) {
@@ -86,22 +56,28 @@ export function Tests() {
   const { cases, requirements, changelog } = useReviewStore();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("Alle");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("Alle");
+  const [sourceFilter, setSourceFilter] = useState("Alle");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string | null>(null);
 
   const normalizedQuery = query.trim().toLocaleLowerCase("de-DE");
+  const requirementsById = new Map(requirements.map((req) => [req.id, req]));
+  const sourceOf = (requirementId: string) => {
+    const req = requirementsById.get(requirementId);
+    return req?.origin?.documentName ?? req?.source ?? "Ohne Quellenangabe";
+  };
+  const sources = [...new Set(cases.map((item) => sourceOf(item.requirementId)))].sort((a, b) => a.localeCompare(b, "de"));
   const filtered = cases
     .filter((item) => reviewFilter === "Alle" || item.review.decision === reviewFilter)
     .filter((item) => priorityFilter === "Alle" || item.priority === priorityFilter)
-    .filter((item) => !normalizedQuery || [item.id, item.requirementId, item.title, item.technique]
+    .filter((item) => sourceFilter === "Alle" || sourceOf(item.requirementId) === sourceFilter)
+    .filter((item) => !normalizedQuery || [item.id, item.requirementId, item.title, item.technique, sourceOf(item.requirementId)]
       .some((value) => value.toLocaleLowerCase("de-DE").includes(normalizedQuery)))
     .sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.id.localeCompare(b.id));
   const pageCount = Math.max(1, Math.ceil(filtered.length / TESTS_PER_PAGE));
   const currentPage = Math.min(page, pageCount);
   const pageCases = filtered.slice((currentPage - 1) * TESTS_PER_PAGE, currentPage * TESTS_PER_PAGE);
-  const sourceOf = (id: string) => requirements.find((r) => r.id === id)?.source ?? "";
-  const exportable = cases.filter((c) => c.review.decision !== "Abgelehnt");
   const resetPage = () => { setPage(1); setSelected(null); };
   const historyFor = (item: GeneratedTestCase) => [...changelog].reverse().filter((entry) =>
     entry.testCaseId === item.id
@@ -112,7 +88,7 @@ export function Tests() {
     <Header
       title="Testfälle"
       subtitle="Testfälle filtern, aufklappen und gemeinsam mit ihrer Änderungshistorie prüfen. Maximal zehn Fälle werden je Seite angezeigt."
-      action={<button className="primary" disabled={exportable.length === 0} onClick={() => exportPlan(exportable, sourceOf)}><Download size={15} /> Testplan exportieren (CSV)</button>}
+      action={<button className="primary" disabled={filtered.length === 0} onClick={() => printTestCasesAsPdf(filtered, requirements, sourceFilter)}><Download size={15} /> Gefilterte Testfälle als PDF</button>}
     />
 
     {cases.length === 0 ? <Panel><p className="muted">
@@ -136,8 +112,14 @@ export function Tests() {
               {REVIEW_FILTERS.map((status) => <option key={status}>{status}</option>)}
             </select>
           </label>
+          <label className="field inline">Quelle
+            <select value={sourceFilter} onChange={(event) => { setSourceFilter(event.target.value); resetPage(); }}>
+              <option>Alle</option>
+              {sources.map((source) => <option key={source}>{source}</option>)}
+            </select>
+          </label>
           <span className="muted small">{filtered.length} von {cases.length} Testfall/Testfällen</span>
-          {(query || priorityFilter !== "Alle" || reviewFilter !== "Alle") && <button onClick={() => { setQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); resetPage(); }}>Filter zurücksetzen</button>}
+          {(query || priorityFilter !== "Alle" || reviewFilter !== "Alle" || sourceFilter !== "Alle") && <button onClick={() => { setQuery(""); setPriorityFilter("Alle"); setReviewFilter("Alle"); setSourceFilter("Alle"); resetPage(); }}>Filter zurücksetzen</button>}
         </div>
 
         {filtered.length === 0 ? <p className="muted">Keine Testfälle entsprechen den gewählten Filtern.</p> : <div className="casegroup">
