@@ -111,7 +111,7 @@ export function Tests() {
     <Header
       title="Testfälle"
       subtitle="Testfälle filtern, aufklappen und gemeinsam mit ihrer Änderungshistorie prüfen. Maximal zehn Fälle werden je Seite angezeigt."
-      action={<button className="primary" disabled={exportable.length === 0} onClick={() => exportPlan(exportable, sourceOf)}><Download size={15} /> Testplan für Hersteller exportieren (CSV)</button>}
+      action={<button className="primary" disabled={exportable.length === 0} onClick={() => exportPlan(exportable, sourceOf)}><Download size={15} /> Testplan exportieren (CSV)</button>}
     />
 
     {cases.length === 0 ? <Panel><p className="muted">
