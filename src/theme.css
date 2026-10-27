@@ -69,6 +69,12 @@
   --rule-bg: #e0f2f6;
   --missing: #98a4ae;
 
+  /* Buttons – ITSG website style (owner decision 2026-10-27): red #D50032 */
+  --button: var(--itsg-red);
+  --button-hover: #b0002a;
+  --button-tint: #fdeef1;
+  --on-button: #ffffff;
+
   /* Elevation of floating lists (dropdowns) */
   --shadow: rgba(16, 24, 32, 0.14);
 }

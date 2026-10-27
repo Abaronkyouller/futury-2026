@@ -78,7 +78,7 @@ export function GraphPage() {
     <>
       <Header
         title="Nachverfolgbarkeit"
-        subtitle="Nachvollziehen, wie ein Testfall entstanden ist: woher die Regel stammt, wie das Modell begründet hat und was erwartet wird. Hinweise markieren Aussagen, die sich nicht in der Quelle finden – ein Anlass zur Prüfung, kein Beweis für einen Fehler."
+        // subtitle="Nachvollziehen, wie ein Testfall entstanden ist: woher die Regel stammt, wie das Modell begründet hat und was erwartet wird. Hinweise markieren Aussagen, die sich nicht in der Quelle finden – ein Anlass zur Prüfung, kein Beweis für einen Fehler."
       />
 
       <Panel>
